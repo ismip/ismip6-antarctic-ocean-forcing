@@ -1,0 +1,44 @@
+## This file contains the default values of all possible configuration options
+## used to run analysis.  Do not modify options in this file direct.
+## Instead, follow this procedure:
+##  1. Create and empty config file (say config.myrun).
+##  2. Copy and modify any config options you want to change from this file into
+##     into your new config file.
+##  3. run: misomip1analysis config.myrun.  This will read the configuraiton
+##     first from this file and then replace that configuraiton with any
+##     changes from from config.myrun
+
+
+[grid]
+## Config options related to the horizontal and vertical output grids
+
+# horizontal grid info
+nx = 761
+ny = 761
+dx = 8e3
+dy = 8e3
+
+# vertical grid info
+# extrapolation grid
+nzExtrap = 90
+dzExtrap = -20.
+
+# final ISMIP6 grid
+nzFinal = 30
+dzFinal = -60.
+
+
+[extrapolation]
+## Config options related to extrapolation into ice-shelf cavities and IMBIE
+## basins
+
+# the radius (in meters) of the Gaussian kernel used for local averaging in
+# the horizontal extrapolation
+kernelRadius = 25e3
+
+# the maximum distance to extrapolate per iteration
+maxDistance = 25e3
+
+# threshold for the weight sum during extrapolation.  Only points with enough
+# valid neighbors to exceed this threshold will become valid in each iteration.
+weightSumThreshold = 0.1
