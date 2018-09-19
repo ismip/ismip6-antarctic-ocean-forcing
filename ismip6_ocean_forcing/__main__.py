@@ -13,6 +13,7 @@ matplotlib.use('Agg')
 
 import ismip6_ocean_forcing
 from ismip6_ocean_forcing.bedmap2 import bedmap2_to_ismip6_grid
+from ismip6_ocean_forcing.imbie import make_imbie_masks
 
 
 def main():
@@ -49,6 +50,7 @@ def main():
     config.read(configFiles)
 
     bedmap2_to_ismip6_grid(config)
+    make_imbie_masks(config)
 
 
 if __name__ == "__main__":
