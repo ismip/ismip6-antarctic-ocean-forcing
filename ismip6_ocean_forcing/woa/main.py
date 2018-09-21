@@ -1,6 +1,8 @@
 import os
 from ismip6_ocean_forcing.io import download_files
 from ismip6_ocean_forcing.woa import remap, extrap
+from ismip6_ocean_forcing.thermal_forcing.main import compute_thermal_forcing
+from ismip6_ocean_forcing.remap.res import get_res
 
 
 def extrapolate_woa(config):
@@ -12,6 +14,8 @@ def extrapolate_woa(config):
         os.makedirs('woa')
     except OSError:
         pass
+
+    res = get_res(config)
 
     print('Extrapolate World Ocean Atlas...')
 
@@ -35,5 +39,13 @@ def extrapolate_woa(config):
     remap.remap_woa(config)
 
     extrap.extrap_woa(config)
+
+    tempFileName = \
+        'woa/woa_temperature_1995-2012_{}_extrap_vert.nc'.format(res)
+    salinFileName = \
+        'woa/woa_salinity_1995-2012_{}_extrap_vert.nc'.format(res)
+    outFileName = \
+        'woa/woa_thermal_forcing_1995-2012_{}_extrap_vert.nc'.format(res)
+    compute_thermal_forcing(tempFileName, salinFileName, outFileName)
 
     print('  Done.')
