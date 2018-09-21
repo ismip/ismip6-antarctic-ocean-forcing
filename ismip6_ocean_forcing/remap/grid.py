@@ -260,12 +260,12 @@ class LatLonGridDescriptor(MeshDescriptor):  # {{{
         else:
             descriptor.units = 'radians'
 
-        descriptor._set_coords(latVarName, lonVarName, ds[latVarName].dims[0],
-                               ds[lonVarName].dims[0])
-
         # interp/extrap corners
         descriptor.lonCorner = interp_extrap_corner(descriptor.lon)
         descriptor.latCorner = interp_extrap_corner(descriptor.lat)
+
+        descriptor._set_coords(latVarName, lonVarName, ds[latVarName].dims[0],
+                               ds[lonVarName].dims[0])
 
         if 'history' in ds.attrs:
             descriptor.history = '\n'.join([ds.attrs['history'],
@@ -363,16 +363,20 @@ class LatLonGridDescriptor(MeshDescriptor):  # {{{
         # set the name of the grid
         dLat = self.lat[1]-self.lat[0]
         dLon = self.lon[1]-self.lon[0]
+        lonRange = self.lonCorner[-1] - self.lonCorner[0]
+        latRange = self.latCorner[-1] - self.latCorner[0]
         if 'degree' in self.units:
             units = 'degree'
-            if numpy.abs(self.lon[-1] - self.lon[0] - 360.) > 1e-10:
+            if numpy.abs(lonRange - 360.) > 1e-10:
+                print('lon')
                 self.regional = True
-            if numpy.abs(self.lat[-1] - self.lat[0] - 180.) > 1e-10:
+            if numpy.abs(latRange - 180.) > 1e-10:
+                print('lat')
                 self.regional = True
         elif 'rad' in self.units:
-            if numpy.abs(self.lon[-1] - self.lon[0] - 2.*numpy.pi) > 1e-10:
+            if numpy.abs(lonRange - 2.*numpy.pi) > 1e-10:
                 self.regional = True
-            if numpy.abs(self.lat[-1] - self.lat[0] - numpy.pi) > 1e-10:
+            if numpy.abs(latRange - numpy.pi) > 1e-10:
                 self.regional = True
             units = 'radian'
         else:
