@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import ismip6_ocean_forcing
+from ismip6_ocean_forcing.rignot2013.remap import rignot_to_ismip6_grid
 from ismip6_ocean_forcing.bedmap2 import bedmap2_to_ismip6_grid
 from ismip6_ocean_forcing.imbie import make_imbie_masks
 from ismip6_ocean_forcing.woa.main import extrapolate_woa
@@ -51,6 +52,7 @@ def main():
     config = ConfigParser(interpolation=ExtendedInterpolation())
     config.read(configFiles)
 
+    rignot_to_ismip6_grid(config)
     bedmap2_to_ismip6_grid(config)
     make_imbie_masks(config)
     extrapolate_woa(config)

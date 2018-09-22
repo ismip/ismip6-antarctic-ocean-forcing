@@ -116,3 +116,15 @@ folder = anomaly
 
 # the folder for WOA plus the anomaly
 woaFolder = anomaly_plus_woa
+
+
+[rignot]
+## Config options relate to the Rignot et al. (2013) melt rates
+
+# remap the melt rates?
+remap = False
+
+# The original file name
+fileName = rignot/rignot.nc
+
+
