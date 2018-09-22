@@ -36,8 +36,7 @@ def make_3D_bed_mask(inFileName, outFileName, bedFileName):
 
 
 def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
-                 basinNumberFileName, bedMaskFileName, progressDir,
-                 timeIndices=None, zIndices=None):
+                 basinNumberFileName, bedMaskFileName, progressDir):
 
     if os.path.exists(outFileName):
         return
@@ -58,11 +57,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         ds = xarray.open_dataset(progressFileName)
     else:
         ds = xarray.open_dataset(inFileName)
-        if 'time' in ds.dims and timeIndices is not None:
-            ds = ds.isel(time=timeIndices)
-
-        if zIndices is not None:
-            ds = ds.isel(z=zIndices)
 
         # mask out bed and areas under ice shelves or in grounded ice regions
         _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName)
@@ -103,7 +97,7 @@ def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
         bedMask = dsMask.bedMask[zIndex, :, :].values
         mask = numpy.logical_not(numpy.logical_and(bedMask, openOceanMask))
         if 'time' in ds.dims:
-            for tIndex in range(ds.sizes['times']):
+            for tIndex in range(ds.sizes['time']):
                 field = field3D[tIndex, zIndex, :, :]
                 field[mask] = numpy.NaN
                 field3D[tIndex, zIndex, :, :] = field
@@ -143,7 +137,7 @@ def _extrap_basin(config, ds, fieldName, basinName, validMask, invalidMask,
     origShape = field3D.shape
 
     if 'time' in ds.dims:
-        nt = ds.sizes['times']
+        nt = ds.sizes['time']
     else:
         nt = 1
         field3D = field3D.reshape((1, origShape[0], origShape[1],
