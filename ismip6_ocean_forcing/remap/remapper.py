@@ -35,7 +35,8 @@ import xarray as xr
 import sys
 
 from ismip6_ocean_forcing.remap.grid import MpasMeshDescriptor, \
-    LatLonGridDescriptor, ProjectionGridDescriptor, PointCollectionDescriptor
+    LatLonGridDescriptor, LatLon2DGridDescriptor, ProjectionGridDescriptor, \
+    PointCollectionDescriptor
 
 
 class Remapper(object):
@@ -81,12 +82,12 @@ class Remapper(object):
                             "PointCollectionDescriptor is not supported.")
         if not isinstance(sourceDescriptor,
                           (MpasMeshDescriptor,  LatLonGridDescriptor,
-                           ProjectionGridDescriptor)):
+                           LatLon2DGridDescriptor, ProjectionGridDescriptor)):
             raise TypeError("sourceDescriptor is not of a recognized type.")
 
         if not isinstance(destinationDescriptor,
                           (MpasMeshDescriptor,  LatLonGridDescriptor,
-                           ProjectionGridDescriptor,
+                           LatLon2DGridDescriptor, ProjectionGridDescriptor,
                            PointCollectionDescriptor)):
             raise TypeError(
                 "destinationDescriptor is not of a recognized type.")
