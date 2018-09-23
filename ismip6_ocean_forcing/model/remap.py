@@ -245,7 +245,8 @@ def _remap(config, modelFolder):
         outDescriptor = get_antarctic_descriptor(outGridFileName)
 
         mappingFileName = '{}/map_{}_to_{}.nc'.format(
-                modelFolder, inDescriptor.meshName, outDescriptor.meshName)
+                modelName.lower(), inDescriptor.meshName,
+                outDescriptor.meshName)
 
         remapper = Remapper(inDescriptor, outDescriptor, mappingFileName)
 

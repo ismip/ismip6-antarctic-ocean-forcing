@@ -51,8 +51,10 @@ def _extrap_model(config, modelFolder):
             modelFolder, modelName, fieldName, res)
 
         progressDir = '{}/progress_{}'.format(modelFolder, fieldName)
+        matrixDir = '{}/matrices'.format(modelName.lower())
         extrap_horiz(config, inFileName, outFileName, fieldName, bedFileName,
-                     basinNumberFileName, bedMaskFileName, progressDir)
+                     basinNumberFileName, bedMaskFileName, progressDir,
+                     matrixDir)
 
     for fieldName in ['temperature', 'salinity']:
         inFileName = '{}/{}_{}_{}_extrap_horiz.nc'.format(

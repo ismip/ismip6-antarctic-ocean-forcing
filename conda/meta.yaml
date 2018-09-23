@@ -37,7 +37,6 @@ requirements:
         - cartopy
         - shapely
         - nco
-        - scikit-fmm
         - gsw
 about:
     home:  http://gitub.com/xylar/ismip6-ocean-forcing

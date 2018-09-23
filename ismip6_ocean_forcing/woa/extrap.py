@@ -19,8 +19,10 @@ def extrap_woa(config):
             'woa/woa_{}_1995-2012_{}_extrap_horiz.nc'.format(fieldName, res)
 
         progressDir = 'woa/progress_{}'.format(fieldName)
+        matrixDir = 'woa/matrices'
         extrap_horiz(config, inFileName, outFileName, fieldName, bedFileName,
-                     basinNumberFileName, bedMaskFileName, progressDir)
+                     basinNumberFileName, bedMaskFileName, progressDir,
+                     matrixDir)
 
     for fieldName in ['temperature', 'salinity']:
         inFileName = \

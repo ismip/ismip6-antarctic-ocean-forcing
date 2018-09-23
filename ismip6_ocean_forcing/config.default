@@ -36,13 +36,6 @@ dzFinal = -60.
 # the horizontal extrapolation
 kernelRadius = 25e3
 
-# the maximum distance to extrapolate per iteration
-maxDistance = 25e3
-
-# threshold for the weight sum during extrapolation.  Only points with enough
-# valid neighbors to exceed this threshold will become valid in each iteration.
-weightSumThreshold = 0.1
-
 
 [climatology]
 ## The range of time indices to use in climatology defining "present-day"
