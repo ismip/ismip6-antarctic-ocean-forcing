@@ -1,0 +1,50 @@
+{% set version = "1.0" %}
+
+package:
+    name: ismip6_ocean_forcing
+    version: {{ version }}
+
+source:
+    path: ..
+
+build:
+    number: 0
+    script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv"
+    noarch: python
+
+test:
+    imports:
+        - ismip6_ocean_forcing
+    commands:
+        - ismip6_ocean_forcing --version
+
+requirements:
+    build:
+        - python
+        - setuptools
+    run:
+        - python
+        - cython
+        - setuptools
+        - numpy
+        - scipy
+        - matplotlib
+        - netcdf4
+        - xarray
+        - progressbar2
+        - basemap
+        - descartes
+        - cartopy
+        - shapely
+        - nco
+        - gsw
+about:
+    home:  http://gitub.com/xylar/ismip6-ocean-forcing
+    license: MIT
+    license_file: LICENSE
+    summary: 'A python package for creating ISMIP6 ocean forcing data sets.'
+
+extra:
+    recipe-maintainers:
+        - xylar
+

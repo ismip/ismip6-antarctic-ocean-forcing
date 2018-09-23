@@ -1,0 +1,123 @@
+## This file contains the default values of all possible configuration options
+## used to run analysis.  Do not modify options in this file direct.
+## Instead, follow this procedure:
+##  1. Create and empty config file (say config.myrun).
+##  2. Copy and modify any config options you want to change from this file into
+##     into your new config file.
+##  3. run: misomip1analysis config.myrun.  This will read the configuraiton
+##     first from this file and then replace that configuraiton with any
+##     changes from from config.myrun
+
+
+[grid]
+## Config options related to the horizontal and vertical output grids
+
+# horizontal grid info
+nx = 761
+ny = 761
+dx = 8e3
+dy = 8e3
+
+# vertical grid info
+# extrapolation grid
+nzExtrap = 90
+dzExtrap = -20.
+
+# final ISMIP6 grid
+nzFinal = 30
+dzFinal = -60.
+
+
+[extrapolation]
+## Config options related to extrapolation into ice-shelf cavities and IMBIE
+## basins
+
+# the radius (in meters) of the Gaussian kernel used for local averaging in
+# the horizontal extrapolation
+kernelRadius = 25e3
+
+
+[climatology]
+## The range of time indices to use in climatology defining "present-day"
+# Should likely be the range of 1995-2012 to match the WOA climatology
+firstTIndex = 145
+lastTIndex = 162
+
+# the output folder
+folder = climatology
+
+
+[output]
+## Options related to the time and depth indices to include in the analysis
+
+# min/max time index (-1 for the end of the time variable)
+tIndexMin = 0
+tIndexMax = -1
+
+# min/max depth index (-1 for the end of the depth variable)
+zIndexMin = 0
+zIndexMax = -1
+
+
+[model]
+## Config options related to the model to extrapolate forcing for
+
+# The name of the model.  A lower-case version of this name is the folder
+# where all model data is stored
+name = CCSM4
+
+# Input files
+temperatureFileName = ccsm4/T_S_Omon_CCSM4_histrcp85_r1i1p1_v20121128.nc
+salinityFileName = ccsm4/T_S_Omon_CCSM4_histrcp85_r1i1p1_v20121128.nc
+
+# Variable names
+lon = LON
+lat = LAT
+z = LEV
+time = TIME
+temperature = THETAO
+salinity = SOFIXED
+z_bnds = LEV_bnds
+
+# Output folder
+folder = 1850-2100
+
+
+[combine]
+## Config options related to combining model output from separate times and/or
+## depths into a single data set
+
+# is there data to combine
+combine = False
+
+# dimension (either time or z, but not both) across which the individual data
+# sets differ
+dim = time
+
+# A comma-separated list of folders to combine
+folders = 1850-2100
+
+# The output folder
+outFolder = combined
+
+
+[anomaly]
+## Config options related to the anomaly and its combination with WOA
+
+# the folder for the anomaly data set
+folder = anomaly
+
+# the folder for WOA plus the anomaly
+woaFolder = anomaly_plus_woa
+
+
+[rignot]
+## Config options relate to the Rignot et al. (2013) melt rates
+
+# remap the melt rates?
+remap = False
+
+# The original file name
+fileName = rignot/rignot.nc
+
+
