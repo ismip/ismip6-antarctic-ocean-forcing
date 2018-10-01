@@ -5,9 +5,9 @@ import skfmm
 import os
 
 
-def extend_imbie_masks(basins, bedFileName):
+def extend_imbie_masks(res, basins, bedFileName):
 
-    outFileName = 'imbie/basinNumbers.nc'
+    outFileName = 'imbie/basinNumbers_{}.nc'.format(res)
     if os.path.exists(outFileName):
         return
 
@@ -33,7 +33,7 @@ def extend_imbie_masks(basins, bedFileName):
     basinNumber = -1*numpy.zeros((ny, nx), int)
     for index, basinName in enumerate(basinNames):
         print('    {}'.format(basinName))
-        imageFileName = 'imbie/basins/{}.png'.format(basinName)
+        imageFileName = 'imbie/basins_{}/{}.png'.format(res, basinName)
         image = misc.imread(imageFileName)
         basinFraction = 1. - image[::-1, :, 0]/255.
         distance = skfmm.distance(-2.*basinFraction + 1)

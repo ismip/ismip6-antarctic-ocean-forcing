@@ -33,8 +33,10 @@ dzFinal = -60.
 ## basins
 
 # the radius (in meters) of the Gaussian kernel used for local averaging in
-# the horizontal extrapolation
-kernelRadius = 25e3
+# the horizontal extrapolation for valid and invalid source points,
+# respectively
+validKernelRadius = 100e3
+invalidKernelRadius = 12e3
 
 
 [climatology]

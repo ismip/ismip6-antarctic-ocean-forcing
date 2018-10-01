@@ -60,6 +60,53 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     except OSError:
         pass
 
+    validKernelRadius = config.getfloat('extrapolation', 'validKernelRadius')
+    invalidKernelRadius = config.getfloat('extrapolation',
+                                          'invalidKernelRadius')
+
+    # write matrices for each basin and vertical level
+    progressFileName = '{}/open_ocean.nc'.format(progressDir)
+    if not os.path.exists(progressFileName):
+        ds = xarray.open_dataset(inFileName)
+
+        # mask out bed and areas under ice shelves or in grounded ice regions
+        _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName)
+
+        # first, extrapolate the open ocean
+        validMask = openOceanMask
+        invalidMask = openOceanMask
+        basinMask = openOceanMask
+        basinName = 'open ocean'
+
+        matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
+        _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+                              invalidMask, basinMask, validKernelRadius,
+                              invalidKernelRadius, matrixFileTemplate,
+                              bedMaskFileName)
+
+    basinCount = numpy.amax(basinNumbers) + 1
+    for basinNumber in range(basinCount):
+
+        progressFileName = '{}/basin{}.nc'.format(progressDir, basinNumber)
+        if not os.path.exists(progressFileName):
+            ds = xarray.open_dataset(inFileName)
+
+            validMask = numpy.logical_or(basinNumbers == basinNumber,
+                                         openOceanMask)
+            invalidMask = basinNumbers == basinNumber
+            basinMask = basinNumbers == basinNumber
+            basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
+
+            matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
+                    matrixDir, basinNumber)
+            _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+                                  invalidMask, basinMask, validKernelRadius,
+                                  invalidKernelRadius, matrixFileTemplate,
+                                  bedMaskFileName)
+
+    # extrapolate each basin and vertical level
+    dsOut = xarray.open_dataset(inFileName)
+
     progressFileName = '{}/open_ocean.nc'.format(progressDir)
     if os.path.exists(progressFileName):
         ds = xarray.open_dataset(progressFileName)
@@ -72,15 +119,15 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         # first, extrapolate the open ocean
         validMask = openOceanMask
         invalidMask = openOceanMask
+        basinMask = openOceanMask
         basinName = 'open ocean'
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
-        _write_basin_matrices(config, ds, fieldName, basinName, validMask,
-                              invalidMask,  bedMaskFileName,
-                              matrixFileTemplate)
-        _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate)
+        _extrap_basin(ds, fieldName, basinName, matrixFileTemplate)
 
         ds.to_netcdf(progressFileName)
+
+    _add_basin_field(ds, dsOut, fieldName, openOceanMask)
 
     # then, extrapolate each IMBIE basin
     basinCount = numpy.amax(basinNumbers) + 1
@@ -90,19 +137,67 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         if os.path.exists(progressFileName):
             ds = xarray.open_dataset(progressFileName)
         else:
-            validMask = openOceanMask
-            invalidMask = numpy.logical_or(basinNumbers == basinNumber,
-                                           openOceanMask)
+            ds = xarray.open_dataset(inFileName)
+
+            validMask = numpy.logical_or(basinNumbers == basinNumber,
+                                         openOceanMask)
+            invalidMask = basinNumbers == basinNumber
+            basinMask = basinNumbers == basinNumber
             basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
 
             matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
                     matrixDir, basinNumber)
-            _write_basin_matrices(config, ds, fieldName, basinName, validMask,
-                                  invalidMask,  bedMaskFileName,
-                                  matrixFileTemplate)
 
-            _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate)
+            _extrap_basin(ds, fieldName, basinName, matrixFileTemplate)
             ds.to_netcdf(progressFileName)
+
+        mask = numpy.logical_and(basinNumbers == basinNumber,
+                                 numpy.logical_not(openOceanMask))
+        _add_basin_field(ds, dsOut, fieldName, mask)
+
+    dsOut.to_netcdf(outFileName)
+
+
+def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
+                                    progressDir, matrixDir):
+
+    if os.path.exists(outFileName):
+        return
+
+    try:
+        os.makedirs(progressDir)
+    except OSError:
+        pass
+
+    try:
+        os.makedirs(matrixDir)
+    except OSError:
+        pass
+
+    ds = xarray.open_dataset(inFileName)
+
+    # first, extrapolate the open ocean
+    nx = ds.sizes['x']
+    ny = ds.sizes['y']
+    validMask = numpy.ones((ny, nx), bool)
+    invalidMask = numpy.ones((ny, nx), bool)
+    basinMask = numpy.ones((ny, nx), bool)
+
+    invalidKernelRadius = config.getfloat('extrapolation',
+                                          'invalidKernelRadius')
+    # we're extrapolating from data that's already been extrapolated, so no
+    # no need to use the larger valid radius
+    validKernelRadius = invalidKernelRadius
+
+    basinName = 'grounded above sea level'
+
+    matrixFileTemplate = '{}/matrix_grounded_above_sea_level_{{}}.npz'.format(
+            matrixDir)
+    _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+                          invalidMask, basinMask, validKernelRadius,
+                          invalidKernelRadius, matrixFileTemplate)
+
+    _extrap_basin(ds, fieldName, basinName, matrixFileTemplate)
 
     ds.to_netcdf(outFileName)
 
@@ -134,9 +229,25 @@ def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
 
 
 def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
-                          invalidMask, bedMaskFileName, matrixFileTemplate):
+                          invalidMask, basinMask, validKernelRadius,
+                          invalidKernelRadius, matrixFileTemplate,
+                          bedMaskFileName=None):
 
-    dsMask = xarray.open_dataset(bedMaskFileName)
+    def get_kernel(kernelRadius):
+        # the kernel should be big enough to capture weights up to 0.01 of the
+        # peak
+        kernelSize = int(numpy.ceil(kernelRadius*3/dx))
+        x = dx*numpy.arange(-kernelSize, kernelSize+1)/kernelRadius
+        x, y = numpy.meshgrid(x, x)
+
+        kernel = numpy.exp(-0.5*(x**2 + y**2))
+        # kernel = kernel/numpy.sum(kernel)
+        return kernelSize, kernel
+
+    if bedMaskFileName is None:
+        dsMask = None
+    else:
+        dsMask = xarray.open_dataset(bedMaskFileName)
 
     validMask = numpy.logical_and(validMask, ds.lat.values < -60.)
     invalidMask = numpy.logical_and(invalidMask, ds.lat.values < -60.)
@@ -144,15 +255,9 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
     nz = ds.sizes['z']
 
     dx = config.getfloat('grid', 'dx')
-    kernelRadius = config.getfloat('extrapolation', 'kernelRadius')
 
-    # the kernel should be big enough to capture weights up to 0.01 of the peak
-    kernelSize = int(numpy.ceil(kernelRadius*3/dx))
-    x = dx*numpy.arange(-kernelSize, kernelSize+1)/kernelRadius
-    x, y = numpy.meshgrid(x, x)
-
-    kernel = numpy.exp(-0.5*(x**2 + y**2))
-    kernel = kernel/numpy.sum(kernel)
+    validKernelSize, validKernel = get_kernel(validKernelRadius)
+    invalidKernelSize, invalidKernel = get_kernel(invalidKernelRadius)
 
     field3D = ds[fieldName].values
 
@@ -172,19 +277,25 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
         if os.path.exists(outFileName):
             continue
 
-        bedMask = dsMask.bedMask[zIndex, :, :].values
         field = field3D[zIndex, :, :]
+
+        if dsMask is None:
+            bedMask = numpy.ones(field.shape)
+        else:
+            bedMask = dsMask.bedMask[zIndex, :, :].values
         valid = numpy.logical_and(numpy.isfinite(field), validMask)
         fillMask = numpy.logical_and(numpy.isnan(field), invalidMask)
         fillMask = numpy.logical_and(fillMask, bedMask)
         dataMask = numpy.logical_or(valid, fillMask)
         dataMask = numpy.logical_not(binary_fill_holes(
                 numpy.logical_not(dataMask)))
+        dataMask = numpy.logical_and(dataMask, basinMask)
         valid = numpy.logical_and(valid, dataMask)
         fillMask = numpy.logical_and(fillMask, dataMask)
         fillCount = numpy.count_nonzero(fillMask)
 
-        weightSum = convolve2d(dataMask, kernel, mode='same')
+        validWeightSum = convolve2d(valid, validKernel, mode='same')
+        invalidWeightSum = convolve2d(fillMask, invalidKernel, mode='same')
 
         ny, nx = fillMask.shape
         indices = numpy.indices((ny, nx))
@@ -192,7 +303,9 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
         xIndices = indices[1].ravel()
 
         fillIndices = numpy.nonzero(fillMask.ravel())[0]
-        weightSum = weightSum[fillMask]
+        validWeightSum = validWeightSum[fillMask]
+        invalidWeightSum = invalidWeightSum[fillMask]
+        weightSum = validWeightSum + invalidWeightSum
 
         fillInverseMap = -1*numpy.ones((ny, nx), int)
         fillInverseMap[fillMask] = numpy.arange(fillCount)
@@ -201,16 +314,16 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
         for index, fillIndex in enumerate(fillIndices):
             xc = xIndices[fillIndex]
             yc = yIndices[fillIndex]
-            xMin = max(0, xc-kernelSize)
-            xMax = min(nx, xc+kernelSize+1)
-            yMin = max(0, yc-kernelSize)
-            yMax = min(ny, yc+kernelSize+1)
-            kxMin = xMin-xc+kernelSize
-            kxMax = xMax-xc+kernelSize
-            kyMin = yMin-yc+kernelSize
-            kyMax = yMax-yc+kernelSize
+            xMin = max(0, xc-invalidKernelSize)
+            xMax = min(nx, xc+invalidKernelSize+1)
+            yMin = max(0, yc-invalidKernelSize)
+            yMax = min(ny, yc+invalidKernelSize+1)
+            kxMin = xMin-xc+invalidKernelSize
+            kxMax = xMax-xc+invalidKernelSize
+            kyMin = yMin-yc+invalidKernelSize
+            kyMax = yMax-yc+invalidKernelSize
             otherIndices = fillInverseMap[yMin:yMax, xMin:xMax]
-            weights = kernel[kyMin:kyMax, kxMin:kxMax]/weightSum[index]
+            weights = invalidKernel[kyMin:kyMax, kxMin:kxMax]/weightSum[index]
             mask = dataMask[yMin:yMax, xMin:xMax]
             mask = otherIndices >= 0
             otherIndices = otherIndices[mask]
@@ -220,13 +333,13 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
             matrix[index, index] = 1 + matrix[index, index]
 
         matrix = matrix.tocsr()
-        _save_matrix_and_kernel(outFileName, matrix, kernel, valid, fillMask,
-                                weightSum)
+        _save_matrix_and_kernel(outFileName, matrix, validKernel, valid,
+                                fillMask, weightSum)
         bar.update(zIndex)
     bar.finish()
 
 
-def _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate):
+def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate):
 
     nz = ds.sizes['z']
 
@@ -244,8 +357,8 @@ def _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate):
     workCount = 0
     for zIndex in range(nz):
 
-        matrix, kernel, valid, fillMask, weightSum = _load_matrix_and_kernel(
-                matrixFileTemplate.format(zIndex))
+        matrix, validKernel, valid, fillMask, weightSum = \
+            _load_matrix_and_kernel(matrixFileTemplate.format(zIndex))
 
         fillCount = numpy.count_nonzero(fillMask)
 
@@ -261,8 +374,10 @@ def _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate):
     progress = 0
     for zIndex in range(nz):
 
-        matrix, kernel, valid, fillMask, weightSum = _load_matrix_and_kernel(
-                matrixFileTemplate.format(zIndex))
+        matrix, validKernel, valid, fillMask, weightSum = \
+            _load_matrix_and_kernel(matrixFileTemplate.format(zIndex))
+
+        nanMask = numpy.logical_not(numpy.logical_or(valid, fillMask))
 
         fillCount = numpy.count_nonzero(fillMask)
         if fillCount == 0:
@@ -275,11 +390,12 @@ def _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate):
             fieldExtrap = fieldSlice.copy()
             fieldExtrap[numpy.logical_not(valid)] = 0.
             fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
-            fieldExtrap = convolve2d(fieldExtrap, kernel, mode='same')
+            fieldExtrap = convolve2d(fieldExtrap, validKernel, mode='same')
             rhs = fieldExtrap[fillMask]/weightSum
 
             fieldFill = spsolve(matrix, rhs)
             fieldSlice[fillMask] = fieldFill
+            fieldSlice[nanMask] = numpy.nan
 
             field3D[tIndex, zIndex, :, :] = fieldSlice
 
@@ -295,6 +411,38 @@ def _extrap_basin(config, ds, fieldName, basinName, matrixFileTemplate):
     attrs = ds[fieldName].attrs
     ds[fieldName] = (dims, field3D)
     ds[fieldName].attrs = attrs
+
+
+def _add_basin_field(dsIn, dsOut, fieldName, mask):
+
+    nz = dsIn.sizes['z']
+
+    fieldIn = dsIn[fieldName].values
+    fieldOut = dsOut[fieldName].values
+
+    origShape = fieldIn.shape
+
+    if 'time' in dsIn.dims:
+        nt = dsIn.sizes['time']
+    else:
+        nt = 1
+        fieldIn = fieldIn.reshape((1, origShape[0], origShape[1],
+                                   origShape[2]))
+        fieldOut = fieldOut.reshape((1, origShape[0], origShape[1],
+                                     origShape[2]))
+
+    for zIndex in range(nz):
+        for tIndex in range(nt):
+            fieldSliceIn = fieldIn[tIndex, zIndex, :, :]
+            fieldSliceOut = fieldOut[tIndex, zIndex, :, :]
+            fieldSliceOut[mask] = fieldSliceIn[mask]
+            fieldOut[tIndex, zIndex, :, :] = fieldSliceOut
+
+    if 'time' not in dsIn.dims:
+        fieldOut = fieldOut.reshape(origShape)
+
+    dsOut[fieldName] = (dsIn[fieldName].dims, fieldOut)
+    dsOut[fieldName].attrs = dsIn[fieldName].attrs
 
 
 def _save_matrix_and_kernel(fileName, matrix, kernel, valid, fillMask,

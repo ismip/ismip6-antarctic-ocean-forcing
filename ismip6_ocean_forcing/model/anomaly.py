@@ -38,7 +38,7 @@ def _combine_model_output(config):
                folders.split(',')]
 
     try:
-        os.makedirs('outFolder')
+        os.makedirs(outFolder)
     except OSError:
         pass
 
@@ -68,6 +68,11 @@ def _compute_climatology(config):
     inFolder = '{}/{}'.format(baseFolder, config.get('combine', 'outFolder'))
     outFolder = '{}/{}'.format(baseFolder, config.get('climatology', 'folder'))
 
+    try:
+        os.makedirs(outFolder)
+    except OSError:
+        pass
+
     print('  Computing present-day climatology...')
     for fieldName in ['temperature', 'salinity']:
         inFileName = '{}/{}_{}_{}.nc'.format(
@@ -94,6 +99,11 @@ def _compute_anomaly(config):
     climFolder = '{}/{}'.format(baseFolder,
                                 config.get('climatology', 'folder'))
     outFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'folder'))
+
+    try:
+        os.makedirs(outFolder)
+    except OSError:
+        pass
 
     print('  Computing anomaly from present-day...')
     for fieldName in ['temperature', 'salinity']:
@@ -124,6 +134,11 @@ def _add_anomaly_to_woa(config):
     inFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'folder'))
     outFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'woaFolder'))
 
+    try:
+        os.makedirs(outFolder)
+    except OSError:
+        pass
+
     print('  Adding WOA climatology to the anomaly...')
     for fieldName in ['temperature', 'salinity']:
         woaFileName = \
@@ -147,7 +162,7 @@ def _add_anomaly_to_woa(config):
 
 
 def _compute_thermal_driving(config):
-    res = get_res(config)
+    res = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     subfolder = config.get('anomaly', 'woaFolder')
     modelFolder = '{}/{}'.format(modelName.lower(), subfolder)

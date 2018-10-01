@@ -5,7 +5,7 @@ import zipfile
 
 from ismip6_ocean_forcing.io import download_files
 from ismip6_ocean_forcing.remap.interp1d import weights_and_indices, interp2d
-from ismip6_ocean_forcing.remap.res import get_res
+from ismip6_ocean_forcing.remap.res import get_horiz_res
 
 
 def bedmap2_to_ismip6_grid(config):
@@ -18,7 +18,7 @@ def bedmap2_to_ismip6_grid(config):
     except OSError:
         pass
 
-    res = get_res(config)
+    res = get_horiz_res(config)
 
     inFileName = 'bedmap2/bedmap2.nc'
     outGridFileName = 'ismip6/{}_grid.nc'.format(res)

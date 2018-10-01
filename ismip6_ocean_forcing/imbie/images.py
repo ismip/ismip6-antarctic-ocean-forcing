@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 from ismip6_ocean_forcing.remap.polar import to_polar
 
 
-def write_basin_images(inFileName):
+def write_basin_images(res, inFileName):
 
-    if os.path.exists('imbie/basins/'):
+    if os.path.exists('imbie/basins_{}/'.format(res)):
         return
 
     basinFileName = 'imbie/AntarcticBasins.geojson'
@@ -29,7 +29,7 @@ def write_basin_images(inFileName):
     dx = (ds.x[1] - ds.x[0]).values
 
     try:
-        os.makedirs('imbie/basins')
+        os.makedirs('imbie/basins_{}'.format(res))
     except OSError:
         pass
 
@@ -37,7 +37,7 @@ def write_basin_images(inFileName):
     for index in range(len(basinShapes)):
         name = basinData['features'][index]['properties']['name']
         print('    {}'.format(name))
-        _write_basin_image(basinShapes[index], name, nx, ny, dx)
+        _write_basin_image(res, basinShapes[index], name, nx, ny, dx)
 
 
 def _make_polar_basins(basinData):
@@ -62,7 +62,7 @@ def _make_polar_basins(basinData):
     return basinShapes
 
 
-def _write_basin_image(basinShape, name, nx, ny, dx):
+def _write_basin_image(res, basinShape, name, nx, ny, dx):
     my_dpi = 600
     fig = plt.figure(figsize=(nx/float(my_dpi), ny/float(my_dpi)), dpi=my_dpi)
     ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -81,5 +81,5 @@ def _write_basin_image(basinShape, name, nx, ny, dx):
     plt.xlim([-dx*0.5*(nx+1), dx*0.5*(nx+1)])
     plt.ylim([-dx*0.5*(ny+1), dx*0.5*(ny+1)])
     fig.canvas.draw()
-    plt.savefig('imbie/basins/{}.png'.format(name), dpi=my_dpi)
+    plt.savefig('imbie/basins_{}/{}.png'.format(res, name), dpi=my_dpi)
     plt.close()

@@ -3,14 +3,13 @@ import os
 import numpy
 import progressbar
 
-from ismip6_ocean_forcing.remap.interp1d import weights_and_indices, \
-    interp_depth
+from ismip6_ocean_forcing.remap.interp1d import remap_vertical
 
 from ismip6_ocean_forcing.remap.descriptor import get_antarctic_descriptor
 from ismip6_ocean_forcing.remap.grid import LatLonGridDescriptor, \
     LatLon2DGridDescriptor
 from ismip6_ocean_forcing.remap.remapper import Remapper
-from ismip6_ocean_forcing.remap.res import get_res
+from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
 
 
 def remap_model(config, modelFolder):
@@ -132,76 +131,20 @@ def _interp_z(config, modelFolder):
 
     inFileNames = {}
     outFileNames = {}
-    bothExist = True
     for fieldName in ['temperature', 'salinity']:
         inFileNames[fieldName] = \
             '{}/{}_{}_periodic.nc'.format(modelFolder, modelName, fieldName)
 
         outFileNames[fieldName] = \
             '{}/{}_{}_interp_z.nc'.format(modelFolder, modelName, fieldName)
-        if not os.path.exists(outFileNames[fieldName]):
-            bothExist = False
 
-    if bothExist:
-        return
-
-    print('  Interpolate in depth to common grid...')
-    dz = config.getfloat('grid', 'dzExtrap')
-    nz = config.getint('grid', 'nzExtrap')
-    zOut = dz*numpy.arange(nz+1)
-
-    zIndexMin = config.getint('output', 'zIndexMin')
-    zIndexMax = config.getint('output', 'zIndexMax')
-    if zIndexMax == -1:
-        zIndexMax = nz+1
-    else:
-        zIndexMax += 2
-
-    zOut = zOut[zIndexMin:zIndexMax]
-
-    for fieldName in inFileNames:
-        inFileName = inFileNames[fieldName]
-        outFileName = outFileNames[fieldName]
-        print('    {}'.format(outFileName))
-        dsIn = xarray.open_dataset(inFileName)
-
-        zIn = numpy.zeros(dsIn.sizes['z']+1)
-        zIn[0:-1] = dsIn.z_bnds[:, 0]
-        zIn[-1] = dsIn.z_bnds[-1, 1]
-        weights, inIndices = weights_and_indices(xInBounds=zIn,
-                                                 xOutBounds=zOut,
-                                                 xDim='z')
-
-        dsOut = xarray.Dataset()
-        groupby = dsIn[fieldName].groupby('time')
-        result = groupby.apply(interp_depth, weights=weights,
-                               inIndices=inIndices, normalizationThreshold=0.1)
-        dsOut[fieldName] = result
-        for attrName in ['units', 'standard_name', 'long_name']:
-            if attrName in dsIn[fieldName].attrs:
-                dsOut[fieldName].attrs[attrName] = \
-                    dsIn[fieldName].attrs[attrName]
-        for coord in ['lon', 'lat', 'time']:
-            dsOut[coord] = dsIn[coord]
-        z = 0.5*(zOut[0:-1] + zOut[1:])
-        z_bnds = numpy.zeros((len(z), 2))
-        z_bnds[:, 0] = zOut[0:-1]
-        z_bnds[:, 1] = zOut[1:]
-        dsOut['z'] = (('z',), z)
-        dsOut.z.attrs = dsIn.z.attrs
-        dsOut.z.attrs['bounds'] = 'z_bnds'
-        dsOut['z_bnds'] = (('z', 'nbounds'), z_bnds)
-        dsOut.z_bnds.attrs = dsIn.z_bnds.attrs
-        dsOut[fieldName].coords['z'] = dsOut.z
-
-        dsOut = dsOut.set_coords(['lat', 'lon', 'z', 'time', 'z_bnds'])
-
-        dsOut.to_netcdf(outFileName)
+    remap_vertical(config, inFileNames, outFileNames, extrap=True)
 
 
 def _remap(config, modelFolder):
 
     res = get_res(config)
+    hres = get_horiz_res(config)
     modelName = config.get('model', 'name')
 
     inFileNames = {}
@@ -223,7 +166,7 @@ def _remap(config, modelFolder):
     for fieldName in inFileNames:
         inFileName = inFileNames[fieldName]
         outFileName = outFileNames[fieldName]
-        outGridFileName = 'ismip6/{}_grid.nc'.format(res)
+        outGridFileName = 'ismip6/{}_grid.nc'.format(hres)
         print('    {}'.format(outFileName))
         progressDir = '{}/progress_remap_{}'.format(modelFolder, fieldName)
 

@@ -1,5 +1,6 @@
 import numpy
 import xarray
+import os
 
 
 def weights_and_indices(xInCenter=None, xOutCenter=None,
@@ -224,6 +225,84 @@ def interp_depth(field, weights, inIndices, normalizationThreshold=None):
     result = _normalize(result, mask, normalizationThreshold)
 
     return result
+
+
+def remap_vertical(config, inFileNames, outFileNames, extrap=True):
+
+    bothExist = True
+    for fieldName in ['temperature', 'salinity']:
+        if not os.path.exists(outFileNames[fieldName]):
+            bothExist = False
+
+    if bothExist:
+        return
+
+    if extrap:
+        print('  Interpolate in depth to extrapolation grid...')
+        dz = config.getfloat('grid', 'dzExtrap')
+        nz = config.getint('grid', 'nzExtrap')
+    else:
+        print('  Interpolate in depth to final grid...')
+        dz = config.getfloat('grid', 'dzFinal')
+        nz = config.getint('grid', 'nzFinal')
+    zOut = dz*numpy.arange(nz+1)
+
+    zIndexMin = config.getint('output', 'zIndexMin')
+    zIndexMax = config.getint('output', 'zIndexMax')
+    if zIndexMax == -1:
+        zIndexMax = nz+1
+    else:
+        zIndexMax += 2
+
+    zOut = zOut[zIndexMin:zIndexMax]
+
+    for fieldName in inFileNames:
+        inFileName = inFileNames[fieldName]
+        outFileName = outFileNames[fieldName]
+        print('    {}'.format(outFileName))
+        dsIn = xarray.open_dataset(inFileName)
+
+        zIn = numpy.zeros(dsIn.sizes['z']+1)
+        zIn[0:-1] = dsIn.z_bnds[:, 0]
+        zIn[-1] = dsIn.z_bnds[-1, 1]
+        weights, inIndices = weights_and_indices(xInBounds=zIn,
+                                                 xOutBounds=zOut,
+                                                 xDim='z')
+
+        dsOut = xarray.Dataset()
+        if 'time' in dsIn.dims:
+            groupby = dsIn[fieldName].groupby('time')
+            result = groupby.apply(interp_depth, weights=weights,
+                                   inIndices=inIndices,
+                                   normalizationThreshold=0.1)
+        else:
+            result = interp_depth(dsIn[fieldName], weights=weights,
+                                  inIndices=inIndices,
+                                  normalizationThreshold=0.1)
+        dsOut[fieldName] = result
+        for attrName in ['units', 'standard_name', 'long_name']:
+            if attrName in dsIn[fieldName].attrs:
+                dsOut[fieldName].attrs[attrName] = \
+                    dsIn[fieldName].attrs[attrName]
+        coords = ['lon', 'lat']
+        if 'time' in dsIn.coords:
+            coords.append('time')
+        for coord in coords:
+            dsOut[coord] = dsIn[coord]
+        z = 0.5*(zOut[0:-1] + zOut[1:])
+        z_bnds = numpy.zeros((len(z), 2))
+        z_bnds[:, 0] = zOut[0:-1]
+        z_bnds[:, 1] = zOut[1:]
+        dsOut['z'] = (('z',), z)
+        dsOut.z.attrs = dsIn.z.attrs
+        dsOut.z.attrs['bounds'] = 'z_bnds'
+        dsOut['z_bnds'] = (('z', 'nbounds'), z_bnds)
+        dsOut.z_bnds.attrs = dsIn.z_bnds.attrs
+        dsOut[fieldName].coords['z'] = dsOut.z
+
+        dsOut = dsOut.set_coords(coords + ['z', 'z_bnds'])
+
+        dsOut.to_netcdf(outFileName)
 
 
 def _normalize(result, mask, normalizationThreshold):
