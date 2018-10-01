@@ -13,15 +13,13 @@ def extrap_vert(config, inFileName, outFileName, fieldName, timeIndices=None):
     if 'time' in ds.dims and timeIndices is not None:
         ds = ds.isel(time=timeIndices)
 
-
     nz = ds.sizes['z']
-
 
     field3D = ds[fieldName].values
     origShape = field3D.shape
 
     if 'time' in ds.dims:
-        nt = ds.sizes['times']
+        nt = ds.sizes['time']
     else:
         nt = 1
         field3D = field3D.reshape((1, origShape[0], origShape[1],

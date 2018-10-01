@@ -15,7 +15,7 @@ def extrapolate_woa(config):
     except OSError:
         pass
 
-    res = get_res(config)
+    resFinal = get_res(config, extrap=False)
 
     print('Extrapolate World Ocean Atlas...')
 
@@ -41,11 +41,11 @@ def extrapolate_woa(config):
     extrap.extrap_woa(config)
 
     tempFileName = \
-        'woa/woa_temperature_1995-2012_{}_extrap_vert.nc'.format(res)
+        'woa/woa_temperature_1995-2012_{}.nc'.format(resFinal)
     salinFileName = \
-        'woa/woa_salinity_1995-2012_{}_extrap_vert.nc'.format(res)
+        'woa/woa_salinity_1995-2012_{}.nc'.format(resFinal)
     outFileName = \
-        'woa/woa_thermal_forcing_1995-2012_{}_extrap_vert.nc'.format(res)
+        'woa/woa_thermal_forcing_1995-2012_{}.nc'.format(resFinal)
     compute_thermal_forcing(tempFileName, salinFileName, outFileName)
 
     print('  Done.')

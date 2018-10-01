@@ -9,7 +9,7 @@ from ismip6_ocean_forcing.remap.descriptor import get_antarctic_descriptor, \
     get_lat_lon_descriptor
 
 from ismip6_ocean_forcing.remap.remapper import Remapper
-from ismip6_ocean_forcing.remap.res import get_res
+from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
 
 
 def remap_woa(config):
@@ -120,6 +120,7 @@ def _interp_z(config):
 def _remap(config):
 
     res = get_res(config)
+    hres = get_horiz_res(config)
     bothExist = True
     for fieldName in ['temperature', 'salinity']:
         outFileName = 'woa/woa_{}_1995-2012_{}.nc'.format(fieldName, res)
@@ -132,7 +133,7 @@ def _remap(config):
     print('  Remapping to {} grid...'.format(res))
     for field, fieldName in [['t', 'temperature'], ['s', 'salinity']]:
         inFileName = 'woa/woa13_95B2_{}00_04v2_interp_z.nc'.format(field)
-        outGridFileName = 'ismip6/{}_grid.nc'.format(res)
+        outGridFileName = 'ismip6/{}_grid.nc'.format(hres)
         outFileName = 'woa/woa_{}_1995-2012_{}.nc'.format(fieldName, res)
         print('    {}'.format(outFileName))
 

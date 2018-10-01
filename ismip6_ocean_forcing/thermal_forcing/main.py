@@ -23,7 +23,7 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
     nz = dsTemp.sizes['z']
 
     if 'time' in dsTemp.dims:
-        nt = dsTemp.sizes['times']
+        nt = dsTemp.sizes['time']
     else:
         nt = 1
 
