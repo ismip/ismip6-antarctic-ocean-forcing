@@ -12,7 +12,6 @@ def extrap_woa(config):
     resFinal = get_res(config, extrap=False)
     hres = get_horiz_res(config)
 
-
     inFileName = 'woa/woa_temperature_1995-2012_{}.nc'.format(resExtrap)
     bedMaskFileName = 'woa/bed_mask_{}.nc'.format(resExtrap)
     bedFileName = 'bedmap2/bedmap2_{}.nc'.format(hres)
