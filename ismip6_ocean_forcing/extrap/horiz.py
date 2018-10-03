@@ -6,6 +6,7 @@ from scipy.ndimage.morphology import binary_fill_holes
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 import progressbar
+import skfmm
 
 
 def make_3D_bed_mask(inFileName, outFileName, bedFileName):
@@ -45,7 +46,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         return
 
     with xarray.open_dataset(bedmap2FileName) as dsBed:
-        openOceanMask = dsBed.open_ocean_mask.values > 0.
+        openOceanMask = dsBed.open_ocean_mask.values >= 0.5
 
     with xarray.open_dataset(basinNumberFileName) as dsBasin:
         basinNumbers = dsBasin.basinNumber.values
@@ -64,6 +65,8 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     invalidKernelRadius = config.getfloat('extrapolation',
                                           'invalidKernelRadius')
 
+    dx = config.getfloat('grid', 'dx')
+
     # write matrices for each basin and vertical level
     progressFileName = '{}/open_ocean.nc'.format(progressDir)
     if not os.path.exists(progressFileName):
@@ -79,9 +82,9 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         basinName = 'open ocean'
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
-        _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+        _write_basin_matrices(ds, fieldName, basinName, validMask,
                               invalidMask, basinMask, validKernelRadius,
-                              invalidKernelRadius, matrixFileTemplate,
+                              invalidKernelRadius, dx, matrixFileTemplate,
                               bedMaskFileName)
 
     basinCount = numpy.amax(basinNumbers) + 1
@@ -91,17 +94,18 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         if not os.path.exists(progressFileName):
             ds = xarray.open_dataset(inFileName)
 
-            validMask = numpy.logical_or(basinNumbers == basinNumber,
-                                         openOceanMask)
+            validMask = _compute_valid_basin_mask(
+                    basinNumbers, basinNumber, openOceanMask,
+                    validKernelRadius, dx)
             invalidMask = basinNumbers == basinNumber
             basinMask = basinNumbers == basinNumber
             basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
 
             matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
                     matrixDir, basinNumber)
-            _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+            _write_basin_matrices(ds, fieldName, basinName, validMask,
                                   invalidMask, basinMask, validKernelRadius,
-                                  invalidKernelRadius, matrixFileTemplate,
+                                  invalidKernelRadius, dx, matrixFileTemplate,
                                   bedMaskFileName)
 
     # extrapolate each basin and vertical level
@@ -117,9 +121,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName)
 
         # first, extrapolate the open ocean
-        validMask = openOceanMask
-        invalidMask = openOceanMask
-        basinMask = openOceanMask
         basinName = 'open ocean'
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
@@ -139,10 +140,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         else:
             ds = xarray.open_dataset(inFileName)
 
-            validMask = numpy.logical_or(basinNumbers == basinNumber,
-                                         openOceanMask)
-            invalidMask = basinNumbers == basinNumber
-            basinMask = basinNumbers == basinNumber
             basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
 
             matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
@@ -189,13 +186,15 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
     # no need to use the larger valid radius
     validKernelRadius = invalidKernelRadius
 
+    dx = config.getfloat('grid', 'dx')
+
     basinName = 'grounded above sea level'
 
     matrixFileTemplate = '{}/matrix_grounded_above_sea_level_{{}}.npz'.format(
             matrixDir)
-    _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+    _write_basin_matrices(ds, fieldName, basinName, validMask,
                           invalidMask, basinMask, validKernelRadius,
-                          invalidKernelRadius, matrixFileTemplate)
+                          invalidKernelRadius, dx, matrixFileTemplate)
 
     _extrap_basin(ds, fieldName, basinName, matrixFileTemplate)
 
@@ -228,9 +227,24 @@ def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
     ds[fieldName].attrs = attrs
 
 
-def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
+def _compute_valid_basin_mask(basinNumbers, basin, openOceanMask,
+                              validKernelRadius, dx):
+
+    basinMask = numpy.logical_and(basinNumbers == basin,
+                                  numpy.logical_not(openOceanMask))
+    otherBasins = numpy.logical_and(basinNumbers != basin,
+                                    numpy.logical_not(openOceanMask))
+    phi = numpy.ma.masked_array(-2.*basinMask + 1., mask=otherBasins)
+
+    distance = skfmm.distance(phi, dx=dx)
+    validMask = numpy.logical_and(distance > 0.,
+                                  distance < 3*validKernelRadius)
+    return validMask
+
+
+def _write_basin_matrices(ds, fieldName, basinName, validMask,
                           invalidMask, basinMask, validKernelRadius,
-                          invalidKernelRadius, matrixFileTemplate,
+                          invalidKernelRadius, dx, matrixFileTemplate,
                           bedMaskFileName=None):
 
     def get_kernel(kernelRadius):
@@ -253,8 +267,6 @@ def _write_basin_matrices(config, ds, fieldName, basinName, validMask,
     invalidMask = numpy.logical_and(invalidMask, ds.lat.values < -60.)
 
     nz = ds.sizes['z']
-
-    dx = config.getfloat('grid', 'dx')
 
     validKernelSize, validKernel = get_kernel(validKernelRadius)
     invalidKernelSize, invalidKernel = get_kernel(invalidKernelRadius)
