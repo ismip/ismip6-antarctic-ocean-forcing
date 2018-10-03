@@ -38,6 +38,7 @@ requirements:
         - shapely
         - nco
         - gsw
+        - scikit-fmm
 about:
     home:  http://gitub.com/xylar/ismip6-ocean-forcing
     license: MIT
