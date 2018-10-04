@@ -39,6 +39,13 @@ validKernelRadius = 100e3
 invalidKernelRadius = 12e3
 
 
+[woa]
+## Config options related to World Ocean Atlas extrapolation
+
+# Extrapolate WOA temperatuer and salinity data?
+compute = True
+
+
 [climatology]
 ## The range of time indices to use in climatology defining "present-day"
 # Should likely be the range of 1995-2012 to match the WOA climatology
@@ -63,6 +70,9 @@ zIndexMax = -1
 
 [model]
 ## Config options related to the model to extrapolate forcing for
+
+# Compute model forcing
+compute = True
 
 # The name of the model.  A lower-case version of this name is the folder
 # where all model data is stored
