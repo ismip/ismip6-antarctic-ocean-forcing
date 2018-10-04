@@ -10,6 +10,10 @@ def extrapolate_woa(config):
     Download WOA 13 v2 temperature and salinity, and extrapolate them into
     ice-shelf cavities and IMBIE basins
     '''
+
+    if not config.getboolean('woa', 'compute'):
+        return
+
     try:
         os.makedirs('woa')
     except OSError:

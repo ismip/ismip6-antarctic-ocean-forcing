@@ -14,6 +14,9 @@ def extrapolate_model(config):
     IMBIE basins. Ten, compute thermal forcing.
     '''
 
+    if not config.getboolean('model', 'compute'):
+        return
+
     modelName = config.get('model', 'name')
     subfolder = config.get('model', 'folder')
     modelFolder = '{}/{}'.format(modelName.lower(), subfolder)
