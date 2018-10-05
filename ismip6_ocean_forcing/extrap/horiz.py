@@ -9,7 +9,6 @@ import progressbar
 import skfmm
 from multiprocessing import Pool
 from functools import partial
-import matplotlib.pyplot as plt
 
 
 def make_3D_bed_mask(inFileName, outFileName, bedFileName):
@@ -145,9 +144,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         ds = xarray.open_dataset(progressFileName)
     else:
         ds = xarray.open_dataset(maskedFileName)
-
-        # mask out bed and areas under ice shelves or in grounded ice regions
-        _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName)
 
         # first, extrapolate the open ocean
         basinName = 'open ocean'
@@ -297,6 +293,16 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
         # kernel = kernel/numpy.sum(kernel)
         return kernelSize, kernel
 
+    nz = ds.sizes['z']
+
+    allExist = True
+    for zIndex in range(nz):
+        if not os.path.exists(matrixFileTemplate.format(zIndex)):
+            allExist = False
+
+    if allExist:
+        return
+
     field3D = ds[fieldName].values
     if 'time' in ds.dims:
         field3D = field3D[0, :, :, :]
@@ -309,8 +315,6 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
 
     validMask = numpy.logical_and(validMask, ds.lat.values < -60.)
     invalidMask = numpy.logical_and(invalidMask, ds.lat.values < -60.)
-
-    nz = ds.sizes['z']
 
     validKernelSize, validKernel = get_kernel(validKernelRadius)
     invalidKernelSize, invalidKernel = get_kernel(invalidKernelRadius)
@@ -361,12 +365,6 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
     valid = numpy.logical_and(valid, dataMask)
     fillMask = numpy.logical_and(fillMask, dataMask)
     fillCount = numpy.count_nonzero(fillMask)
-
-#    plt.imshow(1.*bedMask[zIndex, ::-1, :] + 2.*valid[::-1, :]
-#               + 4.*fillMask[::-1, :] + 8.*dataMask[::-1, :])
-#    plt.colorbar()
-#
-#    plt.show()
 
     validWeightSum = convolve2d(valid, validKernel, mode='same')
     invalidWeightSum = convolve2d(fillMask, invalidKernel, mode='same')
@@ -459,19 +457,22 @@ def _extrap_basin_level(field3D, matrixFileTemplate, zIndex):
     outField = field3D[:, zIndex, :, :]
 
     fillCount = numpy.count_nonzero(fillMask)
-    if fillCount == 0:
-        return outField
+    validCount = numpy.count_nonzero(valid)
 
     for tIndex in range(nt):
         fieldSlice = outField[tIndex, :, :]
-        fieldExtrap = fieldSlice.copy()
-        fieldExtrap[numpy.logical_not(valid)] = 0.
-        fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
-        fieldExtrap = convolve2d(fieldExtrap, validKernel, mode='same')
-        rhs = fieldExtrap[fillMask]/weightSum
+        if fillCount > 0 and validCount > 0:
+            fieldExtrap = fieldSlice.copy()
+            fieldExtrap[numpy.logical_not(valid)] = 0.
+            fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
+            fieldExtrap = convolve2d(fieldExtrap, validKernel, mode='same')
+            rhs = fieldExtrap[fillMask]/weightSum
 
-        fieldFill = spsolve(matrix, rhs)
-        fieldSlice[fillMask] = fieldFill
+            fieldFill = spsolve(matrix, rhs)
+            fieldSlice[fillMask] = fieldFill
+        elif validCount == 0:
+            fieldSlice[fillMask] = numpy.nan
+
         fieldSlice[nanMask] = numpy.nan
 
         outField[tIndex, :, :] = fieldSlice
