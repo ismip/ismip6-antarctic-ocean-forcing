@@ -35,8 +35,14 @@ dzFinal = -60.
 # the radius (in meters) of the Gaussian kernel used for local averaging in
 # the horizontal extrapolation for valid and invalid source points,
 # respectively
-validKernelRadius = 100e3
+validKernelRadius = 150e3
 invalidKernelRadius = 12e3
+
+[parallel]
+## options related to running parts of the process in parallel
+
+# the number of parallel tasks
+tasks = 1
 
 
 [woa]
