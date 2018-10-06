@@ -51,11 +51,18 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         openOceanMask = dsBed.open_ocean_mask.values >= 0.5
         bed = dsBed.bed.values
         mask = numpy.isfinite(bed)
-        # continental shelf mask is all places that aren't open ocean or
-        # have ocean depth less than 1500 m
-        continentalShelfMask = numpy.logical_not(openOceanMask)
-        continentalShelfMask[mask] = numpy.logical_or(
-                continentalShelfMask[mask], bed[mask] > -1500.)
+
+        # continental shelf mask is all places that have ocean depth less than
+        # 1500 m and are connected to the edges of the domain (open ocean)
+        continentalShelfMask = numpy.zeros(bed.shape)
+        continentalShelfMask[mask] = bed[mask] > -1500.
+        # flood fill to take out deep areas inside the continent
+        continentalShelfMask = binary_fill_holes(continentalShelfMask)
+
+        # if ice is over ocean deeper than 1500 m, put it in the open ocean
+        # instead
+        openOceanMask = numpy.logical_or(
+                openOceanMask, numpy.logical_not(continentalShelfMask))
 
     with xarray.open_dataset(basinNumberFileName) as dsBasin:
         basinNumbers = dsBasin.basinNumber.values
@@ -150,7 +157,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
         _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                      parallelTasks)
+                      parallelTasks, openOceanMask)
 
         ds.to_netcdf(progressFileName)
 
@@ -158,6 +165,9 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
     # then, extrapolate each IMBIE basin
     for basinNumber in range(basinCount):
+
+        basinMask = numpy.logical_and(basinNumbers == basinNumber,
+                                      numpy.logical_not(openOceanMask))
 
         progressFileName = '{}/basin{}.nc'.format(progressDir, basinNumber)
         if os.path.exists(progressFileName):
@@ -171,12 +181,10 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                     matrixDir, basinNumber)
 
             _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                          parallelTasks)
+                          parallelTasks, basinMask)
             ds.to_netcdf(progressFileName)
 
-        mask = numpy.logical_and(basinNumbers == basinNumber,
-                                 numpy.logical_not(openOceanMask))
-        _add_basin_field(ds, dsOut, fieldName, mask)
+        _add_basin_field(ds, dsOut, fieldName, basinMask)
 
     dsOut.to_netcdf(outFileName)
 
@@ -226,7 +234,7 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
                           parallelTasks)
 
     _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                  parallelTasks)
+                  parallelTasks, basinMask)
 
     ds.to_netcdf(outFileName)
 
@@ -408,7 +416,8 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
                             fillMask, weightSum)
 
 
-def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks):
+def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
+                  basinMask):
 
     nz = ds.sizes['z']
 
@@ -428,7 +437,8 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks):
 
     pool = Pool(parallelTasks)
     zIndices = range(nz)
-    partial_func = partial(_extrap_basin_level, field3D, matrixFileTemplate)
+    partial_func = partial(_extrap_basin_level, field3D, matrixFileTemplate,
+                           basinMask)
 
     for zIndex, fieldSlice in enumerate(pool.imap(partial_func, zIndices)):
         field3D[:, zIndex, :, :] = fieldSlice
@@ -445,7 +455,7 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks):
     ds[fieldName].attrs = attrs
 
 
-def _extrap_basin_level(field3D, matrixFileTemplate, zIndex):
+def _extrap_basin_level(field3D, matrixFileTemplate, basinMask, zIndex):
 
     matrix, validKernel, valid, fillMask, weightSum = \
         _load_matrix_and_kernel(matrixFileTemplate.format(zIndex))
@@ -456,12 +466,15 @@ def _extrap_basin_level(field3D, matrixFileTemplate, zIndex):
 
     outField = field3D[:, zIndex, :, :]
 
-    fillCount = numpy.count_nonzero(fillMask)
+    basinFillMask = numpy.logical_and(fillMask, basinMask)
+    # no point in doing extrapolation if there are no fill points in the limits
+    # of the basin
+    basinFillCount = numpy.count_nonzero(basinFillMask)
     validCount = numpy.count_nonzero(valid)
 
     for tIndex in range(nt):
         fieldSlice = outField[tIndex, :, :]
-        if fillCount > 0 and validCount > 0:
+        if basinFillCount > 0 and validCount > 0:
             fieldExtrap = fieldSlice.copy()
             fieldExtrap[numpy.logical_not(valid)] = 0.
             fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
@@ -470,7 +483,7 @@ def _extrap_basin_level(field3D, matrixFileTemplate, zIndex):
 
             fieldFill = spsolve(matrix, rhs)
             fieldSlice[fillMask] = fieldFill
-        elif validCount == 0:
+        else:
             fieldSlice[fillMask] = numpy.nan
 
         fieldSlice[nanMask] = numpy.nan
@@ -480,7 +493,7 @@ def _extrap_basin_level(field3D, matrixFileTemplate, zIndex):
     return outField
 
 
-def _add_basin_field(dsIn, dsOut, fieldName, mask):
+def _add_basin_field(dsIn, dsOut, fieldName, basinMask):
 
     nz = dsIn.sizes['z']
 
@@ -502,7 +515,7 @@ def _add_basin_field(dsIn, dsOut, fieldName, mask):
         for tIndex in range(nt):
             fieldSliceIn = fieldIn[tIndex, zIndex, :, :]
             fieldSliceOut = fieldOut[tIndex, zIndex, :, :]
-            fieldSliceOut[mask] = fieldSliceIn[mask]
+            fieldSliceOut[basinMask] = fieldSliceIn[basinMask]
             fieldOut[tIndex, zIndex, :, :] = fieldSliceOut
 
     if 'time' not in dsIn.dims:
