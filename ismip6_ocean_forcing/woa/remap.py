@@ -52,7 +52,7 @@ def _combine_climatologies():
                 bounds = '{}_bnds'.format(coord)
                 if bounds not in ds.data_vars:
                     ds[bounds] = dsIn[bounds]
-            varName = '{}_an'.format(field)
+            varName = '{}_mn'.format(field)
             contribution = weight*dsIn[varName].isel(time=0)
             if varName in ds.data_vars:
                 ds[varName] += contribution
@@ -92,7 +92,7 @@ def _interp_z(config):
                                                  xOutBounds=zOut,
                                                  xDim='z')
 
-        varName = '{}_an'.format(field)
+        varName = '{}_mn'.format(field)
         dsOut = xarray.Dataset()
         result = interp_depth(dsIn[varName], weights, inIndices,
                               normalizationThreshold=0.1)
@@ -137,7 +137,7 @@ def _remap(config):
         outFileName = 'woa/woa_{}_1995-2012_{}.nc'.format(fieldName, res)
         print('    {}'.format(outFileName))
 
-        varName = '{}_an'.format(field)
+        varName = '{}_mn'.format(field)
 
         inDescriptor = get_lat_lon_descriptor(inFileName)
         outDescriptor = get_antarctic_descriptor(outGridFileName)
