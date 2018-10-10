@@ -36,7 +36,7 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
     bar = progressbar.ProgressBar(widgets=widgets,
                                   maxval=nz*nt).start()
 
-    lat = dsTemp.lat.values
+    lat = numpy.maximum(dsTemp.lat.values, -80.)
     lon = dsTemp.lon.values
     for zIndex in range(nz):
         pressure = gsw.p_from_z(dsTemp.z[zIndex].values, lat)
@@ -51,11 +51,10 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
             mask = numpy.isfinite(temp)
             SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
                                 lat[mask])
-            CT = gsw.CT_from_pt(SA, temp[mask])
-            CT_freezing = gsw.freezing.CT_freezing(SA, pressure[mask], 0.)
+            t_freezing = gsw.freezing.t_freezing(SA, pressure[mask], 0.)
 
             thermalForcingLocal = numpy.nan*numpy.ones(temp.shape)
-            thermalForcingLocal[mask] = CT - CT_freezing
+            thermalForcingLocal[mask] = temp[mask] - t_freezing
             thermalForcing[tIndex, zIndex, :, :] = thermalForcingLocal
 
             widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)

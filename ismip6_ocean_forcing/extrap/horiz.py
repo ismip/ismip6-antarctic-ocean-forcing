@@ -146,24 +146,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     # extrapolate each basin and vertical level
     dsOut = xarray.open_dataset(maskedFileName)
 
-    progressFileName = '{}/open_ocean.nc'.format(progressDir)
-    if os.path.exists(progressFileName):
-        ds = xarray.open_dataset(progressFileName)
-    else:
-        ds = xarray.open_dataset(maskedFileName)
-
-        # first, extrapolate the open ocean
-        basinName = 'open ocean'
-
-        matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
-        _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                      parallelTasks, openOceanMask)
-
-        ds.to_netcdf(progressFileName)
-
-    _add_basin_field(ds, dsOut, fieldName, openOceanMask)
-
-    # then, extrapolate each IMBIE basin
     for basinNumber in range(basinCount):
 
         basinMask = numpy.logical_and(basinNumbers == basinNumber,
@@ -181,10 +163,27 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                     matrixDir, basinNumber)
 
             _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                          parallelTasks, basinMask)
+                          parallelTasks, basinMask, replaceValidWithSmoothed=True)
             ds.to_netcdf(progressFileName)
 
         _add_basin_field(ds, dsOut, fieldName, basinMask)
+
+    progressFileName = '{}/open_ocean.nc'.format(progressDir)
+    if os.path.exists(progressFileName):
+        ds = xarray.open_dataset(progressFileName)
+    else:
+        ds = xarray.open_dataset(maskedFileName)
+
+        # first, extrapolate the open ocean
+        basinName = 'open ocean'
+
+        matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
+        _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
+                      parallelTasks, openOceanMask, replaceValidWithSmoothed=True)
+
+        ds.to_netcdf(progressFileName)
+
+    _add_basin_field(ds, dsOut, fieldName, openOceanMask)
 
     dsOut.to_netcdf(outFileName)
 
@@ -234,7 +233,7 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
                           parallelTasks)
 
     _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                  parallelTasks, basinMask)
+                  parallelTasks, basinMask, replaceValidWithSmoothed=False)
 
     ds.to_netcdf(outFileName)
 
@@ -383,9 +382,9 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
     xIndices = indices[1].ravel()
 
     fillIndices = numpy.nonzero(fillMask.ravel())[0]
-    validWeightSum = validWeightSum[fillMask]
     invalidWeightSum = invalidWeightSum[fillMask]
-    weightSum = validWeightSum + invalidWeightSum
+    weightSum = validWeightSum[fillMask] + invalidWeightSum
+    validWeightSum = validWeightSum[valid]
 
     fillInverseMap = -1*numpy.ones((ny, nx), int)
     fillInverseMap[fillMask] = numpy.arange(fillCount)
@@ -413,11 +412,11 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
 
     matrix = matrix.tocsr()
     _save_matrix_and_kernel(outFileName, matrix, validKernel, valid,
-                            fillMask, weightSum)
+                            fillMask, weightSum, validWeightSum)
 
 
 def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
-                  basinMask):
+                  basinMask, replaceValidWithSmoothed):
 
     nz = ds.sizes['z']
 
@@ -438,7 +437,7 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
     pool = Pool(parallelTasks)
     zIndices = range(nz)
     partial_func = partial(_extrap_basin_level, field3D, matrixFileTemplate,
-                           basinMask)
+                           basinMask, replaceValidWithSmoothed)
 
     for zIndex, fieldSlice in enumerate(pool.imap(partial_func, zIndices)):
         field3D[:, zIndex, :, :] = fieldSlice
@@ -455,9 +454,10 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
     ds[fieldName].attrs = attrs
 
 
-def _extrap_basin_level(field3D, matrixFileTemplate, basinMask, zIndex):
+def _extrap_basin_level(field3D, matrixFileTemplate, basinMask, replaceValidWithSmoothed,
+    zIndex):
 
-    matrix, validKernel, valid, fillMask, weightSum = \
+    matrix, validKernel, valid, fillMask, weightSum, validWeightSum = \
         _load_matrix_and_kernel(matrixFileTemplate.format(zIndex))
 
     nt, nz, ny, nx = field3D.shape
@@ -479,6 +479,8 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask, zIndex):
             fieldExtrap[numpy.logical_not(valid)] = 0.
             fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
             fieldExtrap = convolve2d(fieldExtrap, validKernel, mode='same')
+            if replaceValidWithSmoothed:
+                fieldSlice[valid] = fieldExtrap[valid]/validWeightSum
             rhs = fieldExtrap[fillMask]/weightSum
 
             fieldFill = spsolve(matrix, rhs)
@@ -526,10 +528,11 @@ def _add_basin_field(dsIn, dsOut, fieldName, basinMask):
 
 
 def _save_matrix_and_kernel(fileName, matrix, kernel, valid, fillMask,
-                            weightSum):
+                            weightSum, validWeightSum):
     numpy.savez(fileName, data=matrix.data, indices=matrix.indices,
                 indptr=matrix.indptr, shape=matrix.shape, kernel=kernel,
-                valid=valid, fillMask=fillMask, weightSum=weightSum)
+                valid=valid, fillMask=fillMask, weightSum=weightSum,
+                validWeightSum=validWeightSum)
 
 
 def _load_matrix_and_kernel(fileName):
@@ -538,6 +541,7 @@ def _load_matrix_and_kernel(fileName):
     valid = loader['valid']
     fillMask = loader['fillMask']
     weightSum = loader['weightSum']
+    validWeightSum = loader['validWeightSum']
     matrix = csr_matrix((loader['data'], loader['indices'], loader['indptr']),
                         shape=loader['shape'])
-    return matrix, kernel, valid, fillMask, weightSum
+    return matrix, kernel, valid, fillMask, weightSum, validWeightSum

@@ -23,21 +23,13 @@ def extrapolate_woa(config):
 
     print('Extrapolate World Ocean Atlas...')
 
+    # baseURL = 'https://data.nodc.noaa.gov/thredds/fileServer/woa/WOA13/' \
+    #           'DATAv2/temperature/netcdf/decav/0.25/'
+    # fileNames = ['woa13_decav_t00_04v2.nc']
+    # download_files(fileNames, baseURL, 'woa')
     baseURL = 'https://data.nodc.noaa.gov/thredds/fileServer/woa/WOA13/' \
-              'DATAv2/temperature/netcdf/95A4/0.25/'
-    fileNames = ['woa13_95A4_t00_04v2.nc']
-    download_files(fileNames, baseURL, 'woa')
-    baseURL = 'https://data.nodc.noaa.gov/thredds/fileServer/woa/WOA13/' \
-              'DATAv2/salinity/netcdf/95A4/0.25/'
-    fileNames = ['woa13_95A4_s00_04v2.nc']
-    download_files(fileNames, baseURL, 'woa')
-    baseURL = 'https://data.nodc.noaa.gov/thredds/fileServer/woa/WOA13/' \
-              'DATAv2/temperature/netcdf/A5B2/0.25/'
-    fileNames = ['woa13_A5B2_t00_04v2.nc']
-    download_files(fileNames, baseURL, 'woa')
-    baseURL = 'https://data.nodc.noaa.gov/thredds/fileServer/woa/WOA13/' \
-              'DATAv2/salinity/netcdf/A5B2/0.25/'
-    fileNames = ['woa13_A5B2_s00_04v2.nc']
+              'DATAv2/salinity/netcdf/decav/0.25/'
+    fileNames = ['woa13_decav_s00_04v2.nc']
     download_files(fileNames, baseURL, 'woa')
 
     remap.remap_woa(config)
@@ -45,11 +37,11 @@ def extrapolate_woa(config):
     extrap.extrap_woa(config)
 
     tempFileName = \
-        'woa/woa_temperature_1995-2012_{}.nc'.format(resFinal)
+        'woa/woa_temperature_1955-2012_{}.nc'.format(resFinal)
     salinFileName = \
-        'woa/woa_salinity_1995-2012_{}.nc'.format(resFinal)
+        'woa/woa_salinity_1955-2012_{}.nc'.format(resFinal)
     outFileName = \
-        'woa/woa_thermal_forcing_1995-2012_{}.nc'.format(resFinal)
+        'woa/woa_thermal_forcing_1955-2012_{}.nc'.format(resFinal)
     compute_thermal_forcing(tempFileName, salinFileName, outFileName)
 
     print('  Done.')

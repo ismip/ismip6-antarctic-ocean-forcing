@@ -1,6 +1,7 @@
 import xarray
 import os
 import numpy
+import gsw
 
 from ismip6_ocean_forcing.remap.interp1d import weights_and_indices, \
     interp_depth
@@ -22,7 +23,7 @@ def _combine_climatologies():
 
     bothExist = True
     for field in ['t', 's']:
-        outFileName = 'woa/woa13_95B2_{}00_04v2_no_time.nc'.format(field)
+        outFileName = 'woa/woa13_decav_{}00_04v2_no_time.nc'.format(field)
         if not os.path.exists(outFileName):
             bothExist = False
             break
@@ -30,13 +31,14 @@ def _combine_climatologies():
         return
 
     print('  Combining WOA climatologies...')
-    for field in ['t', 's']:
-        outFileName = 'woa/woa13_95B2_{}00_04v2_no_time.nc'.format(field)
+    for field, inPrefix, inVarName in [('t', 'woa13_meop', 't_woa_meop'),
+                                       ('s', 'woa13', 's_mn')]:
+        outFileName = 'woa/woa13_decav_{}00_04v2_no_time.nc'.format(field)
         if os.path.exists(outFileName):
             continue
         ds = xarray.Dataset()
-        for decade, weight in [('95A4', 10./18.), ('A5B2', 8./18.)]:
-            fileName = 'woa/woa13_{}_{}00_04v2.nc'.format(decade, field)
+        for decade, weight in [('decav', 1.)]:
+            fileName = 'woa/{}_{}_{}00_04v2.nc'.format(inPrefix, decade, field)
             print('    {}'.format(fileName))
             dsIn = xarray.open_dataset(fileName, decode_times=False)
             depth = dsIn['depth']
@@ -52,15 +54,15 @@ def _combine_climatologies():
                 bounds = '{}_bnds'.format(coord)
                 if bounds not in ds.data_vars:
                     ds[bounds] = dsIn[bounds]
-            varName = '{}_mn'.format(field)
-            contribution = weight*dsIn[varName].isel(time=0)
-            if varName in ds.data_vars:
-                ds[varName] += contribution
+            contribution = weight*dsIn[inVarName].isel(time=0)
+            if field in ds.data_vars:
+                ds[field] += contribution
             else:
-                ds[varName] = contribution
-                ds[varName].attrs = dsIn[varName].attrs
+                ds[field] = contribution
+                ds[field].attrs = dsIn[inVarName].attrs
 
         ds = ds.drop('time')
+
         ds.to_netcdf(outFileName)
 
 
@@ -68,7 +70,7 @@ def _interp_z(config):
 
     bothExist = True
     for field in ['t', 's']:
-        outFileName = 'woa/woa13_95B2_{}00_04v2_interp_z.nc'.format(field)
+        outFileName = 'woa/woa13_decav_{}00_04v2_interp_z.nc'.format(field)
         if not os.path.exists(outFileName):
             bothExist = False
             break
@@ -81,8 +83,8 @@ def _interp_z(config):
     zOut = dz*numpy.arange(nz+1)
 
     for field in ['t', 's']:
-        inFileName = 'woa/woa13_95B2_{}00_04v2_no_time.nc'.format(field)
-        outFileName = 'woa/woa13_95B2_{}00_04v2_interp_z.nc'.format(field)
+        inFileName = 'woa/woa13_decav_{}00_04v2_no_time.nc'.format(field)
+        outFileName = 'woa/woa13_decav_{}00_04v2_interp_z.nc'.format(field)
         print('    {}'.format(outFileName))
         dsIn = xarray.open_dataset(inFileName)
         zIn = numpy.zeros(dsIn.sizes['depth']+1)
@@ -92,7 +94,7 @@ def _interp_z(config):
                                                  xOutBounds=zOut,
                                                  xDim='z')
 
-        varName = '{}_mn'.format(field)
+        varName = field
         dsOut = xarray.Dataset()
         result = interp_depth(dsIn[varName], weights, inIndices,
                               normalizationThreshold=0.1)
@@ -123,7 +125,7 @@ def _remap(config):
     hres = get_horiz_res(config)
     bothExist = True
     for fieldName in ['temperature', 'salinity']:
-        outFileName = 'woa/woa_{}_1995-2012_{}.nc'.format(fieldName, res)
+        outFileName = 'woa/woa_{}_1955-2012_{}.nc'.format(fieldName, res)
         if not os.path.exists(outFileName):
             bothExist = False
             break
@@ -132,12 +134,14 @@ def _remap(config):
 
     print('  Remapping to {} grid...'.format(res))
     for field, fieldName in [['t', 'temperature'], ['s', 'salinity']]:
-        inFileName = 'woa/woa13_95B2_{}00_04v2_interp_z.nc'.format(field)
+        inFileName = 'woa/woa13_decav_{}00_04v2_interp_z.nc'.format(field)
         outGridFileName = 'ismip6/{}_grid.nc'.format(hres)
-        outFileName = 'woa/woa_{}_1995-2012_{}.nc'.format(fieldName, res)
+        outFileName = 'woa/woa_{}_1955-2012_{}.nc'.format(fieldName, res)
+        if os.path.exists(outFileName):
+            continue
         print('    {}'.format(outFileName))
 
-        varName = '{}_mn'.format(field)
+        varName = field
 
         inDescriptor = get_lat_lon_descriptor(inFileName)
         outDescriptor = get_antarctic_descriptor(outGridFileName)
@@ -159,3 +163,32 @@ def _remap(config):
         dsOut.z.attrs = ds.z.attrs
 
         dsOut.to_netcdf(outFileName)
+
+
+def _in_situ_to_potential_temperature(dsTemp, dsSalin):
+    z = dsTemp.z.values
+    lat = dsTemp.lat.values
+    lon = dsTemp.lon.values
+
+    nz = len(z)
+    ny, nx = lat.shape
+
+    dsPotTemp = dsTemp.drop('in_situ_temperature')
+    pt = numpy.nan*numpy.ones((nz, ny, nx))
+    for zIndex in range(nz):
+        pressure = gsw.p_from_z(z[zIndex], lat)
+        in_situ_temp = dsTemp.in_situ_temperature[zIndex, :, :].values
+        salin = dsSalin.salinity[zIndex, :, :].values
+        mask = numpy.isfinite(in_situ_temp)
+        SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
+                            lat[mask])
+        ptSlice = pt[zIndex, :, :]
+        ptSlice[mask] = gsw.pt_from_t(SA, in_situ_temp[mask], pressure[mask],
+                                      p_ref=0.)
+        pt[zIndex, :, :] = ptSlice
+
+    dsPotTemp['temperature'] = (('z', 'y', 'x'), pt)
+    dsPotTemp['temperature'].attrs = dsTemp.in_situ_temperature.attrs
+
+    return dsPotTemp
+
