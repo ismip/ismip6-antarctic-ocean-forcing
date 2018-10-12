@@ -265,11 +265,11 @@ def _potential_to_in_situ_temperature(dsPotTemp, dsSalin):
             SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
                                 lat[mask])
             TSlice = T[tIndex, zIndex, :, :]
-            TSlice[mask] = gsw.t_from_pt(SA, pt[mask], pressure[mask],
-                                      p_ref=0.)
+            CT = gsw.CT_from_pt(SA, pt[mask])
+            TSlice[mask] = gsw.t_from_CT(SA, CT, pressure[mask])
             T[tIndex, zIndex, :, :] = TSlice
 
-    dsTemp['temperature'] = (('time', 'z', 'y', 'x'), T)
+    dsTemp['temperature'] = (dsPotTemp.temperature.dims, T)
     dsTemp['temperature'].attrs = dsPotTemp.temperature.attrs
 
     return dsTemp

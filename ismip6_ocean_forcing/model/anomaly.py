@@ -28,7 +28,7 @@ def compute_anomaly_and_to_woa(config):
 
 def _combine_model_output(config):
 
-    res = get_res(config)
+    resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     folders = config.get('combine', 'folders')
     combineDim = config.get('combine', 'dim')
@@ -45,10 +45,10 @@ def _combine_model_output(config):
     print('  Combining model results into a single data set...')
 
     for fieldName in ['temperature', 'salinity']:
-        fileNames = ['{}/{}_{}_{}_extrap_vert.nc'.format(
-                folder, modelName, fieldName, res) for folder in folders]
+        fileNames = ['{}/{}_{}_{}.nc'.format(
+                folder, modelName, fieldName, resFinal) for folder in folders]
         outFileName = '{}/{}_{}_{}.nc'.format(
-                outFolder, modelName, fieldName, res)
+                outFolder, modelName, fieldName, resFinal)
 
         if os.path.exists(outFileName):
             print('    {} already exists.'.format(outFileName))
@@ -60,7 +60,7 @@ def _combine_model_output(config):
 
 
 def _compute_climatology(config):
-    res = get_res(config)
+    resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     firstTIndex = config.getint('climatology', 'firstTIndex')
     lastTIndex = config.getint('climatology', 'lastTIndex')
@@ -76,9 +76,9 @@ def _compute_climatology(config):
     print('  Computing present-day climatology...')
     for fieldName in ['temperature', 'salinity']:
         inFileName = '{}/{}_{}_{}.nc'.format(
-                inFolder, modelName, fieldName, res)
+                inFolder, modelName, fieldName, resFinal)
         outFileName = '{}/{}_{}_{}.nc'.format(
-                outFolder, modelName, fieldName, res)
+                outFolder, modelName, fieldName, resFinal)
 
         if os.path.exists(outFileName):
             print('    {} already exists.'.format(outFileName))
@@ -92,7 +92,7 @@ def _compute_climatology(config):
 
 
 def _compute_anomaly(config):
-    res = get_res(config)
+    resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     baseFolder = modelName.lower()
     inFolder = '{}/{}'.format(baseFolder, config.get('combine', 'outFolder'))
@@ -108,11 +108,11 @@ def _compute_anomaly(config):
     print('  Computing anomaly from present-day...')
     for fieldName in ['temperature', 'salinity']:
         inFileName = '{}/{}_{}_{}.nc'.format(
-                inFolder, modelName, fieldName, res)
+                inFolder, modelName, fieldName, resFinal)
         climFileName = '{}/{}_{}_{}.nc'.format(
-                climFolder, modelName, fieldName, res)
+                climFolder, modelName, fieldName, resFinal)
         outFileName = '{}/{}_{}_{}.nc'.format(
-                outFolder, modelName, fieldName, res)
+                outFolder, modelName, fieldName, resFinal)
 
         if os.path.exists(outFileName):
             print('    {} already exists.'.format(outFileName))
@@ -128,7 +128,7 @@ def _compute_anomaly(config):
 
 
 def _add_anomaly_to_woa(config):
-    res = get_res(config)
+    resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     baseFolder = modelName.lower()
     inFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'folder'))
@@ -142,11 +142,11 @@ def _add_anomaly_to_woa(config):
     print('  Adding WOA climatology to the anomaly...')
     for fieldName in ['temperature', 'salinity']:
         woaFileName = \
-            'woa/woa_{}_1995-2012_{}_extrap_vert.nc'.format(fieldName, res)
+            'woa/woa_{}_1955-2012_{}.nc'.format(fieldName, resFinal)
         inFileName = '{}/{}_{}_{}.nc'.format(
-                inFolder, modelName, fieldName, res)
+                inFolder, modelName, fieldName, resFinal)
         outFileName = '{}/{}_{}_{}.nc'.format(
-                outFolder, modelName, fieldName, res)
+                outFolder, modelName, fieldName, resFinal)
 
         if os.path.exists(outFileName):
             print('    {} already exists.'.format(outFileName))
@@ -156,21 +156,21 @@ def _add_anomaly_to_woa(config):
         ds = xarray.open_dataset(inFileName)
         dsWOA = xarray.open_dataset(woaFileName)
         attrs = ds[fieldName].attrs
-        ds[fieldName] = dsWOA[fieldName] + ds[fieldName]
+        ds[fieldName] = ds[fieldName] + dsWOA[fieldName]
         ds[fieldName].attrs = attrs
         ds.to_netcdf(outFileName)
 
 
 def _compute_thermal_driving(config):
-    res = get_res(config, extrap=False)
+    resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     subfolder = config.get('anomaly', 'woaFolder')
     modelFolder = '{}/{}'.format(modelName.lower(), subfolder)
 
     tempFileName = '{}/{}_temperature_{}.nc'.format(
-            modelFolder, modelName, res)
+            modelFolder, modelName, resFinal)
     salinFileName = '{}/{}_salinity_{}.nc'.format(
-            modelFolder, modelName, res)
+            modelFolder, modelName, resFinal)
     outFileName = '{}/{}_thermal_forcing_{}.nc'.format(
-            modelFolder, modelName, res)
+            modelFolder, modelName, resFinal)
     compute_thermal_forcing(tempFileName, salinFileName, outFileName)
