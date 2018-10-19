@@ -1,6 +1,8 @@
 import os
+import zipfile
 
-from ismip6_ocean_forcing.imbie import geojson, images, extend
+from ismip6_ocean_forcing.io import download_files
+from ismip6_ocean_forcing.imbie import images, extend
 from ismip6_ocean_forcing.remap.res import get_horiz_res
 
 
@@ -22,16 +24,49 @@ def make_imbie_masks(config):
 
     print('Building IMBIE basin masks...')
 
-    basins = [[1, 2, 3], 4, 5, 6, 7, 8, [9, 10, 11], 12, 13, 14, 15, 16,
-              [17, 18, 19], 20, 21, 22, 23, 24, 25, 26, 27]
+    basins = {'A-Ap': ['A-Ap'],
+              'Ap-B': ['Ap-B'],
+              'B-C': ['B-C'],
+              'C-Cp': ['C-Cp'],
+              'Cp-D': ['Cp-D'],
+              'D-Dp': ['D-Dp'],
+              'Dp-E': ['Dp-E'],
+              'E-F': ['E-Ep', 'Ep-F'],
+              'F-G': ['F-G'],
+              'G-H': ['G-H'],
+              'H-Hp': ['H-Hp'],
+              'Hp-I': ['Hp-I'],
+              'I-Ipp': ['I-Ipp'],
+              'Ipp-J': ['Ipp-J'],
+              'J-K': ['J-Jpp', 'Jpp-K'],
+              'K-A': ['K-A']}
 
     bedFileName = 'bedmap2/bedmap2_{}.nc'.format(res)
 
-    geojson.download_imbie()
+    _download_imbie()
 
-    geojson.combine_imbie(basins)
-
-    images.write_basin_images(res, bedFileName)
+    images.write_basin_images(res, bedFileName, basins)
 
     extend.extend_imbie_masks(res, basins, bedFileName)
     print('  Done.')
+
+
+def _download_imbie():
+    '''
+    Download the geojson files that define the IMBIE basins
+    '''
+
+    if not os.path.exists(
+            'imbie/ANT_Basins_IMBIE2_v1.6/ANT_Basins_IMBIE2_v1.6.shp'):
+        # download
+        geojsonURL = 'http://imbie.org/wp-content/uploads/2016/09/'
+
+        fileNames = ['ANT_Basins_IMBIE2_v1.6.zip']
+
+        download_files(fileNames, geojsonURL, 'imbie')
+
+        print('Decompressing IMBIE2 data...')
+        # unzip
+        with zipfile.ZipFile('imbie/ANT_Basins_IMBIE2_v1.6.zip', 'r') as f:
+            f.extractall('imbie/ANT_Basins_IMBIE2_v1.6/')
+        print('  Done.')

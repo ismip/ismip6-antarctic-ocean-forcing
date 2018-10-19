@@ -10,7 +10,7 @@ the required packages as follows:
 ```bash
 conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
     matplotlib netCDF4 xarray progressbar2 basemap descartes cartopy shapely \
-    nco gsw scikit-fmm
+    nco gsw scikit-fmm phshp
 ```
 
 If you need help installing `conda`,

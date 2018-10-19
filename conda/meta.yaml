@@ -39,6 +39,7 @@ requirements:
         - nco
         - gsw
         - scikit-fmm
+        - phshp
 about:
     home:  http://gitub.com/xylar/ismip6-ocean-forcing
     license: MIT
