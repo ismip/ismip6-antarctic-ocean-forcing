@@ -18,7 +18,8 @@ def compute_anomaly_and_to_woa(config):
     print('Computing anomalies of {} data and adding them to WOA...'.format(
             modelName))
 
-    _combine_model_output(config)
+    _combine_model_output(config, 'combine')
+    _combine_model_output(config, 'climatology')
     _compute_climatology(config)
     _compute_anomaly(config)
     _add_anomaly_to_woa(config)
@@ -26,14 +27,14 @@ def compute_anomaly_and_to_woa(config):
     print('  Done.')
 
 
-def _combine_model_output(config):
+def _combine_model_output(config, section):
 
     resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
-    folders = config.get('combine', 'folders')
-    combineDim = config.get('combine', 'dim')
+    folders = config.get(section, 'folders')
+    combineDim = config.get(section, 'dim')
     baseFolder = modelName.lower()
-    outFolder = '{}/{}'.format(baseFolder, config.get('combine', 'outFolder'))
+    outFolder = '{}/{}'.format(baseFolder, config.get(section, 'outFolder'))
     folders = ['{}/{}'.format(baseFolder, folder.strip()) for folder in
                folders.split(',')]
 
@@ -65,7 +66,7 @@ def _compute_climatology(config):
     firstTIndex = config.getint('climatology', 'firstTIndex')
     lastTIndex = config.getint('climatology', 'lastTIndex')
     baseFolder = modelName.lower()
-    inFolder = '{}/{}'.format(baseFolder, config.get('combine', 'outFolder'))
+    inFolder = '{}/{}'.format(baseFolder, config.get('climatology', 'outFolder'))
     outFolder = '{}/{}'.format(baseFolder, config.get('climatology', 'folder'))
 
     try:
