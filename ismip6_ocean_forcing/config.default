@@ -53,13 +53,26 @@ compute = True
 
 
 [climatology]
-## The range of time indices to use in climatology defining "present-day"
-# Should likely be the range of 1995-2012 to match the WOA climatology
-firstTIndex = 145
-lastTIndex = 162
+## Config options related to computing a climatology of model output to
+## be subtracted to compute anomalies
+
+# The range of time indices to use in climatology defining "present-day"
+firstTIndex = 140
+lastTIndex = 159
 
 # the output folder
 folder = climatology
+
+# dimension (either time or z, but not both) across which the individual data
+# sets differ
+dim = time
+
+# A comma-separated list of folders to combine
+folders = 1850-2100
+
+# The output folder for the combined time series containing all years in the
+# climatology
+outFolder = climatology/output
 
 
 [output]
