@@ -1,26 +1,45 @@
-import numpy
-import json
+import shapefile
 import xarray
-from shapely.geometry import shape
+import shapely.geometry
+import shapely.ops
 from descartes import PolygonPatch
 import os.path
 import matplotlib.pyplot as plt
-from ismip6_ocean_forcing.remap.polar import to_polar
 
 
-def write_basin_images(res, inFileName):
+def write_basin_images(res, inFileName, basins):
 
     if os.path.exists('imbie/basins_{}/'.format(res)):
         return
 
-    basinFileName = 'imbie/AntarcticBasins.geojson'
+    basinFileName = 'imbie/ANT_Basins_IMBIE2_v1.6/ANT_Basins_IMBIE2_v1.6.shp'
 
     print('  Loading basin geometry...')
-    with open(basinFileName) as f:
-        basinData = json.load(f)
+    reader = shapefile.Reader(basinFileName)
+    fields = reader.fields[1:]
+    field_names = [field[0] for field in fields]
+    inBasinData = {}
+    for sr in reader.shapeRecords():
+        atr = dict(zip(field_names, sr.record))
+        if atr['Subregion'] == '':
+            continue
+        atr['name'] = atr['Subregion']
+        geom = sr.shape.__geo_interface__
+        inBasinData[atr['name']] = dict(type="Feature",
+                                        geometry=geom, properties=atr)
 
-    print('  Converting basins to polar coordintes...')
-    basinShapes = _make_polar_basins(basinData)
+    outBasinData = []
+    for outBasinName in basins:
+        inBasins = basins[outBasinName]
+        if len(inBasins) == 1:
+            inBasinName = inBasins[0]
+            outBasinData.append(inBasinData[inBasinName])
+        else:
+            featuresToCombine = []
+            for inBasinName in inBasins:
+                featuresToCombine.append(inBasinData[inBasinName])
+            feature = _combine_features(featuresToCombine, outBasinName)
+            outBasinData.append(feature)
 
     ds = xarray.open_dataset(inFileName)
     nx = ds.sizes['x']
@@ -34,32 +53,35 @@ def write_basin_images(res, inFileName):
         pass
 
     print('  Writing basin images...')
-    for index in range(len(basinShapes)):
-        name = basinData['features'][index]['properties']['name']
+    for feature in outBasinData:
+        name = feature['properties']['name']
+        basinShape = shapely.geometry.shape(feature['geometry'])
         print('    {}'.format(name))
-        _write_basin_image(res, basinShapes[index], name, nx, ny, dx)
+        _write_basin_image(res, basinShape, name, nx, ny, dx)
 
 
-def _make_polar_basins(basinData):
-    basinShapes = []
-    for feature in basinData['features']:
-        print('    {}'.format(feature['properties']['name']))
-        basinGeom = feature['geometry']
-        coords = basinGeom['coordinates']
-        newCoords = []
-        if(basinGeom['type'] == 'Polygon'):
-            for subpoly in coords:
-                newCoords.append(to_polar(numpy.array(subpoly)).tolist())
-        elif(basinGeom['type'] == 'MultiPolygon'):
-            for poly in coords:
-                newPoly = []
-                for subpoly in poly:
-                    newPoly.append(to_polar(numpy.array(subpoly)).tolist())
-                newCoords.append(newPoly)
-        basinGeom['coordinates'] = newCoords
-        basinShape = shape(basinGeom)
-        basinShapes.append(basinShape)
-    return basinShapes
+def _combine_features(featuresToCombine, newName):
+    featureShapes = []
+    featureNames = []
+    for feature in featuresToCombine:
+        featureShapes.append(shapely.geometry.shape(feature['geometry']))
+        featureNames.append(feature['properties']['name'])
+
+    combinedShape = shapely.ops.cascaded_union(featureShapes)
+
+    feature = {}
+    feature['properties'] = {}
+    feature['properties']['name'] = newName
+    feature['geometry'] = shapely.geometry.mapping(combinedShape)
+
+    if feature['geometry']['type'] == 'GeometryCollection':
+        raise ValueError(
+            "Error: combined geometry is of type GeometryCollection.\n"
+            "       Most likely cause is that multiple feature types "
+            "(regions, \n"
+            "       points and transects) are being cobined.")
+
+    return feature
 
 
 def _write_basin_image(res, basinShape, name, nx, ny, dx):

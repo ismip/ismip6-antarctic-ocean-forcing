@@ -19,19 +19,9 @@ def extend_imbie_masks(res, basins, bedFileName):
         ds['x'] = dsIn.x
         ds['y'] = dsIn.y
 
-    basinNames = []
-    for basinList in basins:
-        if isinstance(basinList, list):
-            basinName = 'Antarctica_IMBIE{}'.format(
-                    '_'.join(['{}'.format(basin) for basin in basinList]))
-            basinNames.append(basinName)
-
-        else:
-            basinNames.append('Antarctica_IMBIE{}'.format(basinList))
-
     minDistance = 1e30*numpy.ones((ny, nx))
     basinNumber = -1*numpy.zeros((ny, nx), int)
-    for index, basinName in enumerate(basinNames):
+    for index, basinName in enumerate(basins.keys()):
         print('    {}'.format(basinName))
         imageFileName = 'imbie/basins_{}/{}.png'.format(res, basinName)
         image = misc.imread(imageFileName)
