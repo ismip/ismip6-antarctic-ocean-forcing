@@ -48,10 +48,11 @@ validSmoothingIterations = 6
 tasks = 1
 
 
-[woa]
-## Config options related to World Ocean Atlas extrapolation
+[observations]
+## Config options related to observations from World Ocean Atlas (WOA), Marines
+## Mammals Exploring the Oceans Pole to Pole (MEOP), UK Met Office's EN4, etc.
 
-# Extrapolate WOA temperatuer and salinity data?
+# Extrapolate temperatuer and salinity data from observations?
 compute = True
 
 
