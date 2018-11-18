@@ -1,6 +1,7 @@
 import os
 from ismip6_ocean_forcing.obs import extrap
 from ismip6_ocean_forcing.woa.main import process_woa
+from ismip6_ocean_forcing.meop.main import process_meop
 from ismip6_ocean_forcing.thermal_forcing.main import compute_thermal_forcing
 from ismip6_ocean_forcing.remap.res import get_res
 
@@ -24,6 +25,7 @@ def process_obs(config):
     decades = '1995-2017'
 
     process_woa(config, decades)
+    process_meop(config)
 
     print('Combining and extrapolating observations...')
 

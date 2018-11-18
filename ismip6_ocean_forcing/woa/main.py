@@ -14,7 +14,7 @@ def process_woa(config, decades):
     except OSError:
         pass
 
-    print('  Processing World Ocean Atlas...')
+    print('Processing World Ocean Atlas...')
 
     woaDecades = ['95A4', 'A5B7']
     woaWeights = [10., 13.]
@@ -29,4 +29,4 @@ def process_woa(config, decades):
 
     remap.remap_woa(config, woaDecades, woaWeights, decades)
 
-    print('    Done.')
+    print('Done.')
