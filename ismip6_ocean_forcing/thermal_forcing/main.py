@@ -54,7 +54,8 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
             t_freezing = gsw.freezing.t_freezing(SA, pressure[mask], 0.)
 
             thermalForcingLocal = numpy.nan*numpy.ones(temp.shape)
-            thermalForcingLocal[mask] = temp[mask] - t_freezing
+            thermalForcingLocal[mask] = numpy.maximum(temp[mask] - t_freezing,
+                                                      0.)
             thermalForcing[tIndex, zIndex, :, :] = thermalForcingLocal
 
             widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
