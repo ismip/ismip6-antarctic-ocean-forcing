@@ -339,8 +339,6 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
 
     print('  Writing matrices for {} in {}...'.format(fieldName, basinName))
 
-    pool = Pool(parallelTasks)
-    zIndices = range(nz)
     widgets = ['  ', progressbar.Percentage(), ' ',
                progressbar.Bar(), ' ', progressbar.ETA()]
     bar = progressbar.ProgressBar(widgets=widgets,
@@ -350,16 +348,26 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
                            field3D, bedMask, validMask, invalidMask,
                            basinMask, openOceanMask, validKernel,
                            invalidKernel, invalidKernelSize,
-                           validSmoothingIterations)
-    for zIndex, _ in enumerate(pool.imap(partial_func, zIndices)):
-        bar.update(zIndex+1)
-    bar.finish()
+                           validSmoothingIterations, dx)
+
+    if parallelTasks == 1:
+        for zIndex in range(nz):
+            partial_func(zIndex)
+            bar.update(zIndex+1)
+        bar.finish()
+    else:
+        pool = Pool(parallelTasks)
+        zIndices = range(nz)
+        for zIndex, _ in enumerate(pool.imap(partial_func, zIndices)):
+            bar.update(zIndex+1)
+        bar.finish()
+        del pool
 
 
 def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
                               invalidMask, basinMask, openOceanMask,
                               validKernel, invalidKernel, invalidKernelSize,
-                              validSmoothingIterations, zIndex):
+                              validSmoothingIterations, dx, zIndex):
     outFileName = matrixFileTemplate.format(zIndex)
     if os.path.exists(outFileName):
         return
@@ -369,20 +377,21 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
     valid = numpy.logical_and(numpy.isfinite(field), validMask)
     fillMask = numpy.logical_and(numpy.isnan(field), invalidMask)
 
-    dataMask = numpy.logical_or(openOceanMask, fillMask)
-    dataMask = numpy.logical_or(dataMask, valid)
+    dataMask = numpy.logical_or(validMask, invalidMask)
     dataMask = numpy.logical_and(dataMask, bedMask[zIndex, :, :])
+    valid = numpy.logical_and(valid, dataMask)
 
-    # flood fill to make sure the data is contiguous
-    dataMask = numpy.logical_not(binary_fill_holes(
-            numpy.logical_not(dataMask)))
+    phi = numpy.ma.masked_array(-2.*valid + 1.,
+                                mask=numpy.logical_not(dataMask))
 
-    # mask to the basin, once we've done the flood fill
-    dataMask = numpy.logical_and(dataMask, basinMask)
+    try:
+        distance = skfmm.distance(phi, dx=dx)
+        distance = distance.filled(fill_value=0.)
+        fillMask = numpy.logical_and(distance > 0., invalidMask)
+    except ValueError:
+        fillMask = numpy.zeros(fillMask.shape, bool)
 
     # only take valid data and fill data that's contiguous and in the basin
-    valid = numpy.logical_and(valid, dataMask)
-    fillMask = numpy.logical_and(fillMask, dataMask)
     fillCount = numpy.count_nonzero(fillMask)
 
     validWeightSum = valid.copy()
@@ -452,17 +461,23 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
     bar = progressbar.ProgressBar(widgets=widgets,
                                   maxval=nz).start()
 
-    pool = Pool(parallelTasks)
-    zIndices = range(nz)
     partial_func = partial(_extrap_basin_level, field3D, matrixFileTemplate,
                            basinMask, replaceValidWithSmoothed,
                            validSmoothingIterations)
+    if parallelTasks == 1:
+        for zIndex in range(nz):
+            field3D[:, zIndex, :, :] = partial_func(zIndex)
+            bar.update(zIndex+1)
+        bar.finish()
+    else:
+        pool = Pool(parallelTasks)
+        zIndices = range(nz)
+        for zIndex, fieldSlice in enumerate(pool.imap(partial_func, zIndices)):
+            field3D[:, zIndex, :, :] = fieldSlice
+            bar.update(zIndex+1)
 
-    for zIndex, fieldSlice in enumerate(pool.imap(partial_func, zIndices)):
-        field3D[:, zIndex, :, :] = fieldSlice
-        bar.update(zIndex+1)
-
-    bar.finish()
+        bar.finish()
+        del pool
 
     if 'time' not in ds.dims:
         field3D = field3D.reshape(origShape)
