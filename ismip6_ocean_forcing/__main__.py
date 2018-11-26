@@ -13,7 +13,7 @@ from ismip6_ocean_forcing.bedmap2 import bedmap2_to_ismip6_grid
 from ismip6_ocean_forcing.imbie import make_imbie_masks
 from ismip6_ocean_forcing.obs.main import process_obs
 from ismip6_ocean_forcing.model.extrap import extrapolate_model
-from ismip6_ocean_forcing.model.anomaly import compute_anomaly_and_to_woa
+from ismip6_ocean_forcing.model.anomaly import compute_anomaly_and_to_obs
 
 
 def main():
@@ -54,7 +54,7 @@ def main():
     make_imbie_masks(config)
     process_obs(config)
     extrapolate_model(config)
-    compute_anomaly_and_to_woa(config)
+    compute_anomaly_and_to_obs(config)
 
 
 if __name__ == "__main__":

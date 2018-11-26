@@ -137,13 +137,13 @@ outFolder = combined
 
 
 [anomaly]
-## Config options related to the anomaly and its combination with WOA
+## Config options related to the anomaly and its combination with observaions
 
 # the folder for the anomaly data set
 folder = anomaly
 
-# the folder for WOA plus the anomaly
-woaFolder = anomaly_plus_woa
+# the folder for obs plus the anomaly
+obsFolder = anomaly_plus_obs
 
 
 [rignot]
