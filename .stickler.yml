@@ -1,0 +1,6 @@
+linters:
+  pep8:
+    python: 3
+    fixer: true
+fixers:
+  enable: true
