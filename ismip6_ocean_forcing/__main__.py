@@ -7,17 +7,13 @@ import argparse
 import pkg_resources
 from configparser import ConfigParser, ExtendedInterpolation
 
-# make sure the 'Agg' backend is used before any local module get loaded
-import matplotlib
-matplotlib.use('Agg')
-
 import ismip6_ocean_forcing
 from ismip6_ocean_forcing.rignot2013.remap import rignot_to_ismip6_grid
 from ismip6_ocean_forcing.bedmap2 import bedmap2_to_ismip6_grid
 from ismip6_ocean_forcing.imbie import make_imbie_masks
-from ismip6_ocean_forcing.woa.main import extrapolate_woa
+from ismip6_ocean_forcing.obs.main import process_obs
 from ismip6_ocean_forcing.model.extrap import extrapolate_model
-from ismip6_ocean_forcing.model.anomaly import compute_anomaly_and_to_woa
+from ismip6_ocean_forcing.model.anomaly import compute_anomaly_and_to_obs
 
 
 def main():
@@ -56,9 +52,9 @@ def main():
     rignot_to_ismip6_grid(config)
     bedmap2_to_ismip6_grid(config)
     make_imbie_masks(config)
-    extrapolate_woa(config)
+    process_obs(config)
     extrapolate_model(config)
-    compute_anomaly_and_to_woa(config)
+    compute_anomaly_and_to_obs(config)
 
 
 if __name__ == "__main__":

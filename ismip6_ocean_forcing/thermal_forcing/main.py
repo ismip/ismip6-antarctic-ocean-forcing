@@ -54,7 +54,8 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
             t_freezing = gsw.freezing.t_freezing(SA, pressure[mask], 0.)
 
             thermalForcingLocal = numpy.nan*numpy.ones(temp.shape)
-            thermalForcingLocal[mask] = temp[mask] - t_freezing
+            thermalForcingLocal[mask] = numpy.maximum(temp[mask] - t_freezing,
+                                                      0.)
             thermalForcing[tIndex, zIndex, :, :] = thermalForcingLocal
 
             widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
@@ -78,3 +79,47 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
         "between the temperature and the local freezing point"
 
     ds.to_netcdf(outFileName)
+
+
+def potential_to_in_situ_temperature(dsPotTemp, dsSalin):
+    z = dsPotTemp.z.values
+    lat = numpy.maximum(dsPotTemp.lat.values, -80.)
+    lon = dsPotTemp.lon.values
+
+    nz = len(z)
+    ny, nx = lat.shape
+
+    if 'time' in dsPotTemp.dims:
+        nt = dsPotTemp.sizes['time']
+        T = numpy.nan*numpy.ones((nt, nz, ny, nx))
+        for zIndex in range(nz):
+            pressure = gsw.p_from_z(z[zIndex], lat)
+            for tIndex in range(nt):
+                pt = dsPotTemp.temperature[tIndex, zIndex, :, :].values
+                salin = dsSalin.salinity[tIndex, zIndex, :, :].values
+                mask = numpy.logical_and(numpy.isfinite(pt), numpy.isfinite(salin))
+                SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
+                                    lat[mask])
+                TSlice = T[tIndex, zIndex, :, :]
+                CT = gsw.CT_from_pt(SA, pt[mask])
+                TSlice[mask] = gsw.t_from_CT(SA, CT, pressure[mask])
+                T[tIndex, zIndex, :, :] = TSlice
+    else:
+        T = numpy.nan*numpy.ones((nz, ny, nx))
+        for zIndex in range(nz):
+            pressure = gsw.p_from_z(z[zIndex], lat)
+            pt = dsPotTemp.temperature[zIndex, :, :].values
+            salin = dsSalin.salinity[zIndex, :, :].values
+            mask = numpy.logical_and(numpy.isfinite(pt), numpy.isfinite(salin))
+            SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
+                                lat[mask])
+            TSlice = T[zIndex, :, :]
+            CT = gsw.CT_from_pt(SA, pt[mask])
+            TSlice[mask] = gsw.t_from_CT(SA, CT, pressure[mask])
+            T[zIndex, :, :] = TSlice
+
+    dsTemp = dsPotTemp.drop('temperature')
+    dsTemp['temperature'] = (dsPotTemp.temperature.dims, T)
+    dsTemp['temperature'].attrs = dsPotTemp.temperature.attrs
+
+    return dsTemp

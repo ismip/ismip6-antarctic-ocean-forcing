@@ -2,7 +2,6 @@ import xarray
 import os
 import numpy
 import progressbar
-import gsw
 
 from ismip6_ocean_forcing.remap.interp1d import remap_vertical
 
@@ -11,6 +10,8 @@ from ismip6_ocean_forcing.remap.grid import LatLonGridDescriptor, \
     LatLon2DGridDescriptor
 from ismip6_ocean_forcing.remap.remapper import Remapper
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
+from ismip6_ocean_forcing.thermal_forcing.main import \
+    potential_to_in_situ_temperature
 
 
 def remap_model(config, modelFolder):
@@ -51,7 +52,6 @@ def _fix_units_and_periodicity(config, modelFolder):
         return
 
     print('  Add a periodic image in longitude and fix units...')
-
 
     datasets = {}
     for fieldName in inFileNames:
@@ -116,9 +116,8 @@ def _fix_units_and_periodicity(config, modelFolder):
 
         datasets[fieldName] = ds
 
-
-    dsTemp = _potential_to_in_situ_temperature(datasets['temperature'],
-                                               datasets['salinity'])
+    dsTemp = potential_to_in_situ_temperature(datasets['temperature'],
+                                              datasets['salinity'])
     dsTemp.to_netcdf(outFileNames['temperature'])
     datasets['salinity'].to_netcdf(outFileNames['salinity'])
 
@@ -242,35 +241,3 @@ def _remap(config, modelFolder):
         dsOut['z_bnds'] = ds.z_bnds
 
         dsOut.to_netcdf(outFileName)
-
-
-def _potential_to_in_situ_temperature(dsPotTemp, dsSalin):
-    z = dsPotTemp.z.values
-    lat = numpy.maximum(dsPotTemp.lat.values, -80.)
-    lon = dsPotTemp.lon.values
-
-    nz = len(z)
-    ny, nx = lat.shape
-
-    nt = dsPotTemp.sizes['time']
-
-    dsTemp = dsPotTemp.drop('temperature')
-    T = numpy.nan*numpy.ones((nt, nz, ny, nx))
-    for zIndex in range(nz):
-        pressure = gsw.p_from_z(z[zIndex], lat)
-        for tIndex in range(nt):
-            pt = dsPotTemp.temperature[tIndex, zIndex, :, :].values
-            salin = dsSalin.salinity[tIndex, zIndex, :, :].values
-            mask = numpy.logical_and(numpy.isfinite(pt), numpy.isfinite(salin))
-            SA = gsw.SA_from_SP(salin[mask], pressure[mask], lon[mask],
-                                lat[mask])
-            TSlice = T[tIndex, zIndex, :, :]
-            CT = gsw.CT_from_pt(SA, pt[mask])
-            TSlice[mask] = gsw.t_from_CT(SA, CT, pressure[mask])
-            T[tIndex, zIndex, :, :] = TSlice
-
-    dsTemp['temperature'] = (dsPotTemp.temperature.dims, T)
-    dsTemp['temperature'].attrs = dsPotTemp.temperature.attrs
-
-    return dsTemp
-

@@ -4,25 +4,25 @@ from ismip6_ocean_forcing.thermal_forcing.main import compute_thermal_forcing
 from ismip6_ocean_forcing.remap.res import get_res
 
 
-def compute_anomaly_and_to_woa(config):
+def compute_anomaly_and_to_obs(config):
     '''
     Combine data from various analysis runs into a single data set, comput its
     anomaly with respect to a present-day climatology, add the result to
-    the WOA climatology, and compute the thermal forcing
+    the observational climatology, and compute the thermal forcing
     '''
 
     if not config.getboolean('combine', 'combine'):
         return
 
     modelName = config.get('model', 'name')
-    print('Computing anomalies of {} data and adding them to WOA...'.format(
-            modelName))
+    print('Computing anomalies of {} data and adding them to observations...'
+          ''.format(modelName))
 
     _combine_model_output(config, 'combine')
     _combine_model_output(config, 'climatology')
     _compute_climatology(config)
     _compute_anomaly(config)
-    _add_anomaly_to_woa(config)
+    _add_anomaly_to_obs(config)
     _compute_thermal_driving(config)
     print('  Done.')
 
@@ -128,22 +128,22 @@ def _compute_anomaly(config):
         ds.to_netcdf(outFileName)
 
 
-def _add_anomaly_to_woa(config):
+def _add_anomaly_to_obs(config):
     resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
     baseFolder = modelName.lower()
     inFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'folder'))
-    outFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'woaFolder'))
+    outFolder = '{}/{}'.format(baseFolder, config.get('anomaly', 'obsFolder'))
 
     try:
         os.makedirs(outFolder)
     except OSError:
         pass
 
-    print('  Adding WOA climatology to the anomaly...')
+    print('  Adding observational climatology to the anomaly...')
     for fieldName in ['temperature', 'salinity']:
-        woaFileName = \
-            'woa/woa_{}_1955-2012_{}.nc'.format(fieldName, resFinal)
+        obsFileName = \
+            'obs/obs_{}_1995-2017_{}.nc'.format(fieldName, resFinal)
         inFileName = '{}/{}_{}_{}.nc'.format(
                 inFolder, modelName, fieldName, resFinal)
         outFileName = '{}/{}_{}_{}.nc'.format(
@@ -155,9 +155,9 @@ def _add_anomaly_to_woa(config):
 
         print('    {}'.format(outFileName))
         ds = xarray.open_dataset(inFileName)
-        dsWOA = xarray.open_dataset(woaFileName)
+        dsObs = xarray.open_dataset(obsFileName)
         attrs = ds[fieldName].attrs
-        ds[fieldName] = ds[fieldName] + dsWOA[fieldName]
+        ds[fieldName] = ds[fieldName] + dsObs[fieldName]
         ds[fieldName].attrs = attrs
         ds.to_netcdf(outFileName)
 
@@ -165,7 +165,7 @@ def _add_anomaly_to_woa(config):
 def _compute_thermal_driving(config):
     resFinal = get_res(config, extrap=False)
     modelName = config.get('model', 'name')
-    subfolder = config.get('anomaly', 'woaFolder')
+    subfolder = config.get('anomaly', 'obsFolder')
     modelFolder = '{}/{}'.format(modelName.lower(), subfolder)
 
     tempFileName = '{}/{}_temperature_{}.nc'.format(
