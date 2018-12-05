@@ -102,17 +102,17 @@ compute = True
 name = CCSM4
 
 # Input files
-temperatureFileName = ccsm4/T_S_Omon_CCSM4_histrcp85_r1i1p1_v20121128.nc
-salinityFileName = ccsm4/T_S_Omon_CCSM4_histrcp85_r1i1p1_v20121128.nc
+temperatureFileName = ccsm4/thetao_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc
+salinityFileName = ccsm4/so_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc
 
 # Variable names
-lon = LON
-lat = LAT
-z = LEV
-time = TIME
-temperature = THETAO
-salinity = SOFIXED
-z_bnds = LEV_bnds
+lon = lon
+lat = lat
+z = lev
+time = time
+temperature = thetao
+salinity = so
+z_bnds = lev_bnds
 
 # Output folder
 folder = 1850-2100
