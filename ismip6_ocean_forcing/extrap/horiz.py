@@ -77,12 +77,9 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     except OSError:
         pass
 
-    validKernelRadius = config.getfloat('extrapolation', 'validKernelRadius')
-    invalidKernelRadius = config.getfloat('extrapolation',
-                                          'invalidKernelRadius')
-
-    validSmoothingIterations = config.getint('extrapolation',
-                                             'validSmoothingIterations')
+    smoothingIterations = config.getint('extrapolation', 'smoothingIterations')
+    smoothingKernelRadius = config.getfloat('extrapolation',
+                                            'smoothingKernelRadius')
 
     dx = config.getfloat('grid', 'dx')
     parallelTasks = config.getint('parallel', 'tasks')
@@ -107,9 +104,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
         _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
-                              validMask, invalidMask, basinMask,
-                              validKernelRadius, invalidKernelRadius,
-                              validSmoothingIterations, dx,
+                              validMask, invalidMask, basinMask, dx,
                               matrixFileTemplate, parallelTasks,
                               bedMaskFileName)
 
@@ -123,7 +118,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         for basinNumber in range(basinCount):
             basinMask = _compute_valid_basin_mask(
                     basinNumbers, basinNumber, openOceanMask,
-                    continentalShelfMask, validKernelRadius, dx)
+                    continentalShelfMask, dx)
             dsBasinMasks['basin{}Mask'.format(basinNumber)] = \
                 (('y', 'x'), basinMask)
         dsBasinMasks.to_netcdf(basinMaskFileName)
@@ -142,9 +137,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
             matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
                     matrixDir, basinNumber)
             _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
-                                  validMask, invalidMask, basinMask,
-                                  validKernelRadius, invalidKernelRadius,
-                                  validSmoothingIterations, dx,
+                                  validMask, invalidMask, basinMask, dx,
                                   matrixFileTemplate, parallelTasks,
                                   bedMaskFileName)
 
@@ -168,7 +161,8 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                     matrixDir, basinNumber)
 
             _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                          parallelTasks, basinMask, validSmoothingIterations,
+                          parallelTasks, basinMask, smoothingIterations,
+                          smoothingKernelRadius, dx,
                           replaceValidWithSmoothed=True)
             ds.to_netcdf(progressFileName)
 
@@ -185,7 +179,8 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
         matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
         _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                      parallelTasks, openOceanMask, validSmoothingIterations,
+                      parallelTasks, openOceanMask, smoothingIterations,
+                      smoothingKernelRadius,  dx,
                       replaceValidWithSmoothed=True)
 
         ds.to_netcdf(progressFileName)
@@ -220,14 +215,11 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
     validMask = numpy.ones((ny, nx), bool)
     invalidMask = numpy.ones((ny, nx), bool)
     basinMask = numpy.ones((ny, nx), bool)
-
-    invalidKernelRadius = config.getfloat('extrapolation',
-                                          'invalidKernelRadius')
     # we're extrapolating from data that's already been extrapolated, so no
-    # no need to use the larger valid radius
-    validKernelRadius = invalidKernelRadius
-    # ... and no need to do multiple iterations
-    validSmoothingIterations = 1
+    # need to do multiple iterations
+    smoothingIterations = 1
+    smoothingKernelRadius = config.getfloat('extrapolation',
+                                            'smoothingKernelRadius')
 
     dx = config.getfloat('grid', 'dx')
     parallelTasks = config.getint('parallel', 'tasks')
@@ -237,13 +229,12 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
     matrixFileTemplate = '{}/matrix_grounded_above_sea_level_{{}}.npz'.format(
             matrixDir)
     _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
-                          invalidMask, basinMask, validKernelRadius,
-                          invalidKernelRadius, validSmoothingIterations,
-                          dx, matrixFileTemplate, parallelTasks)
+                          invalidMask, basinMask, dx, matrixFileTemplate,
+                          parallelTasks)
 
     _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                  parallelTasks, basinMask, validSmoothingIterations,
-                  replaceValidWithSmoothed=False)
+                  parallelTasks, basinMask, smoothingIterations,
+                  smoothingKernelRadius, dx, replaceValidWithSmoothed=False)
 
     ds.to_netcdf(outFileName)
 
@@ -275,7 +266,7 @@ def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
 
 
 def _compute_valid_basin_mask(basinNumbers, basin, openOceanMask,
-                              continentalShelfMask, validKernelRadius, dx):
+                              continentalShelfMask, dx):
 
     basinMask = numpy.logical_and(basinNumbers == basin,
                                   numpy.logical_not(openOceanMask))
@@ -287,28 +278,23 @@ def _compute_valid_basin_mask(basinNumbers, basin, openOceanMask,
 
     distance = skfmm.distance(phi, dx=dx)
     distance = distance.filled(fill_value=0.)
-    validMask = numpy.logical_and(distance > 0.,
-                                  distance < 3*validKernelRadius)
+    validMask = distance > 0.
     basinMask = numpy.logical_or(basinMask, validMask)
     basinMask = numpy.logical_and(basinMask, continentalShelfMask)
     return basinMask
 
 
 def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
-                          invalidMask, basinMask, validKernelRadius,
-                          invalidKernelRadius, validSmoothingIterations,
-                          dx, matrixFileTemplate, parallelTasks,
-                          bedMaskFileName=None):
+                          invalidMask, basinMask, dx, matrixFileTemplate,
+                          parallelTasks, bedMaskFileName=None):
 
-    def get_kernel(kernelRadius):
-        # the kernel should be big enough to capture weights up to 0.01 of the
-        # peak
-        kernelSize = int(numpy.ceil(kernelRadius*3/dx))
-        x = dx*numpy.arange(-kernelSize, kernelSize+1)/kernelRadius
+    def get_extrap_kernel():
+        # set up a simple 3x3 kernel to just do very local averaging
+        kernelSize = 1
+        x = numpy.arange(-kernelSize, kernelSize+1)
         x, y = numpy.meshgrid(x, x)
 
         kernel = numpy.exp(-0.5*(x**2 + y**2))
-        # kernel = kernel/numpy.sum(kernel)
         return kernelSize, kernel
 
     nz = ds.sizes['z']
@@ -334,8 +320,7 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
     validMask = numpy.logical_and(validMask, ds.lat.values < -60.)
     invalidMask = numpy.logical_and(invalidMask, ds.lat.values < -60.)
 
-    validKernelSize, validKernel = get_kernel(validKernelRadius)
-    invalidKernelSize, invalidKernel = get_kernel(invalidKernelRadius)
+    extrapKernelSize, extrapKernel = get_extrap_kernel()
 
     print('  Writing matrices for {} in {}...'.format(fieldName, basinName))
 
@@ -346,9 +331,8 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
 
     partial_func = partial(_write_level_basin_matrix, matrixFileTemplate,
                            field3D, bedMask, validMask, invalidMask,
-                           basinMask, openOceanMask, validKernel,
-                           invalidKernel, invalidKernelSize,
-                           validSmoothingIterations, dx)
+                           basinMask, openOceanMask, extrapKernel,
+                           extrapKernelSize, dx)
 
     if parallelTasks == 1:
         for zIndex in range(nz):
@@ -366,8 +350,7 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
 
 def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
                               invalidMask, basinMask, openOceanMask,
-                              validKernel, invalidKernel, invalidKernelSize,
-                              validSmoothingIterations, dx, zIndex):
+                              kernel, kernelSize, dx, zIndex):
     outFileName = matrixFileTemplate.format(zIndex)
     if os.path.exists(outFileName):
         return
@@ -394,13 +377,8 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
     # only take valid data and fill data that's contiguous and in the basin
     fillCount = numpy.count_nonzero(fillMask)
 
-    validWeightSum = valid.copy()
-    iterMask = numpy.logical_not(dataMask)
-    for iterIndex in range(validSmoothingIterations):
-        validWeightSum = convolve2d(validWeightSum, validKernel, mode='same')
-        validWeightSum[iterMask] = 0.
-
-    invalidWeightSum = convolve2d(fillMask, invalidKernel, mode='same')
+    validWeightSum = convolve2d(valid, kernel, mode='same')
+    invalidWeightSum = convolve2d(fillMask, kernel, mode='same')
 
     ny, nx = fillMask.shape
     indices = numpy.indices((ny, nx))
@@ -419,16 +397,16 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
     for index, fillIndex in enumerate(fillIndices):
         xc = xIndices[fillIndex]
         yc = yIndices[fillIndex]
-        xMin = max(0, xc-invalidKernelSize)
-        xMax = min(nx, xc+invalidKernelSize+1)
-        yMin = max(0, yc-invalidKernelSize)
-        yMax = min(ny, yc+invalidKernelSize+1)
-        kxMin = xMin-xc+invalidKernelSize
-        kxMax = xMax-xc+invalidKernelSize
-        kyMin = yMin-yc+invalidKernelSize
-        kyMax = yMax-yc+invalidKernelSize
+        xMin = max(0, xc-kernelSize)
+        xMax = min(nx, xc+kernelSize+1)
+        yMin = max(0, yc-kernelSize)
+        yMax = min(ny, yc+kernelSize+1)
+        kxMin = xMin-xc+kernelSize
+        kxMax = xMax-xc+kernelSize
+        kyMin = yMin-yc+kernelSize
+        kyMax = yMax-yc+kernelSize
         otherIndices = fillInverseMap[yMin:yMax, xMin:xMax]
-        weights = invalidKernel[kyMin:kyMax, kxMin:kxMax]/weightSum[index]
+        weights = kernel[kyMin:kyMax, kxMin:kxMax]/weightSum[index]
         mask = otherIndices >= 0
         otherIndices = otherIndices[mask]
         weights = weights[mask]
@@ -437,13 +415,26 @@ def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
         matrix[index, index] = 1 + matrix[index, index]
 
     matrix = matrix.tocsr()
-    _save_matrix_and_kernel(outFileName, matrix, validKernel, valid,
-                            fillMask, weightSum, validWeightSum)
+
+    _save_matrix_and_kernel(outFileName, matrix, kernel, valid, fillMask,
+                            weightSum, validWeightSum)
 
 
 def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
-                  basinMask, validSmoothingIterations,
+                  basinMask, smoothingIterations, smoothingKernelRadius, dx,
                   replaceValidWithSmoothed):
+
+    def get_smoothing_kernel(kernelRadius):
+        # the kernel should be big enough to capture weights up to 0.01 of the
+        # peak
+        kernelSize = int(numpy.ceil(kernelRadius*3/dx))
+        x = dx*numpy.arange(-kernelSize, kernelSize+1)/kernelRadius
+        x, y = numpy.meshgrid(x, x)
+
+        kernel = numpy.exp(-0.5*(x**2 + y**2))
+        return kernel
+
+    smoothingKernel = get_smoothing_kernel(smoothingKernelRadius)
 
     nz = ds.sizes['z']
 
@@ -463,7 +454,7 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
 
     partial_func = partial(_extrap_basin_level, field3D, matrixFileTemplate,
                            basinMask, replaceValidWithSmoothed,
-                           validSmoothingIterations)
+                           smoothingKernel, smoothingIterations)
     if parallelTasks == 1:
         for zIndex in range(nz):
             field3D[:, zIndex, :, :] = partial_func(zIndex)
@@ -489,10 +480,10 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
 
 
 def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
-                        replaceValidWithSmoothed, validSmoothingIterations,
-                        zIndex):
+                        replaceValidWithSmoothed, smoothingKernel,
+                        smoothingIterations, zIndex):
 
-    matrix, validKernel, valid, fillMask, weightSum, validWeightSum = \
+    matrix, extrapKernel, valid, fillMask, weightSum, validWeightSum = \
         _load_matrix_and_kernel(matrixFileTemplate.format(zIndex))
 
     nt, nz, ny, nx = field3D.shape
@@ -509,24 +500,35 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
 
     iterMask = numpy.logical_not(numpy.logical_or(valid, fillMask))
 
+    if replaceValidWithSmoothed:
+        mask = numpy.logical_or(valid, fillMask)
+    else:
+        mask = fillMask.copy()
+
+    maskSmooth = convolve2d(mask, smoothingKernel, mode='same')
+
     for tIndex in range(nt):
         fieldSlice = outField[tIndex, :, :]
         if basinFillCount > 0 and validCount > 0:
             fieldExtrap = fieldSlice.copy()
             fieldExtrap[numpy.logical_not(valid)] = 0.
             fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
-            for iterIndex in range(validSmoothingIterations):
-                fieldExtrap = convolve2d(fieldExtrap, validKernel, mode='same')
-                fieldExtrap[iterMask] = 0.
+            fieldExtrap = convolve2d(fieldExtrap, extrapKernel, mode='same')
+            fieldExtrap[iterMask] = 0.
 
-            if replaceValidWithSmoothed:
-                fieldSlice[valid] = fieldExtrap[valid]/validWeightSum
             rhs = fieldExtrap[fillMask]/weightSum
 
             fieldFill = spsolve(matrix, rhs)
             fieldSlice[fillMask] = fieldFill
         else:
             fieldSlice[fillMask] = numpy.nan
+
+        # now, smooth the result over many iterations
+        fieldSlice[iterMask] = 0.
+        for iterIndex in range(smoothingIterations):
+            fieldSmooth = convolve2d(fieldSlice, smoothingKernel, mode='same')
+            fieldSmooth[iterMask] = 0.
+            fieldSlice[mask] = fieldSmooth[mask]/maskSmooth[mask]
 
         fieldSlice[nanMask] = numpy.nan
 
