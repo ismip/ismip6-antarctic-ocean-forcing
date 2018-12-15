@@ -345,7 +345,7 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
         for zIndex, _ in enumerate(pool.imap(partial_func, zIndices)):
             bar.update(zIndex+1)
         bar.finish()
-        del pool
+        pool.terminate()
 
 
 def _write_level_basin_matrix(matrixFileTemplate, field3D, bedMask, validMask,
@@ -468,7 +468,7 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
             bar.update(zIndex+1)
 
         bar.finish()
-        del pool
+        pool.terminate()
 
     if 'time' not in ds.dims:
         field3D = field3D.reshape(origShape)
