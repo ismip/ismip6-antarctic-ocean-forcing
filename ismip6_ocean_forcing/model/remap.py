@@ -224,6 +224,8 @@ def _remap(config, modelFolder):
             dsIn = ds.isel(time=tIndex)
             dsOut = remapper.remap(dsIn, renormalizationThreshold=0.1)
 
+            dsOut = dsOut.transpose('z', 'y', 'x')
+
             for attrName in ['units', 'standard_name', 'long_name']:
                 if attrName in ds[fieldName].attrs:
                     dsOut[fieldName].attrs[attrName] = \
