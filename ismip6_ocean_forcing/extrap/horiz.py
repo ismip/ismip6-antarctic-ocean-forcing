@@ -117,8 +117,8 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         dsBasinMasks = xarray.Dataset()
         for basinNumber in range(basinCount):
             basinMask = _compute_valid_basin_mask(
-                    basinNumbers, basinNumber, openOceanMask,
-                    continentalShelfMask, dx)
+                basinNumbers, basinNumber, openOceanMask,
+                continentalShelfMask, dx)
             dsBasinMasks['basin{}Mask'.format(basinNumber)] = \
                 (('y', 'x'), basinMask)
         dsBasinMasks.to_netcdf(basinMaskFileName)
