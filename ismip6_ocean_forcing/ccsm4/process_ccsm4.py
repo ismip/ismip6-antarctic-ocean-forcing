@@ -12,6 +12,7 @@ parser.add_argument('-o', dest='out_dir', metavar='DIR',
                     type=str, help='output directory')
 args = parser.parse_args()
 
+
 def compute_yearly_mean(inFileName, outFileName, correctSalinity):
     # crop to below 48 S and take annual mean over the RCP 8.5 data
     if os.path.exists(outFileName):
@@ -78,10 +79,10 @@ dates = ['185001-185912',
 for date in dates:
     for field in ['so', 'thetao']:
         inFileName = '{}/{}_Omon_CCSM4_historical_r1i1p1_{}.nc'.format(
-                args.out_dir, field, date)
+            args.out_dir, field, date)
 
         outFileName = '{}/{}_annual_CCSM4_historical_r1i1p1_{}.nc'.format(
-                args.out_dir, field, date)
+            args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName, correctSalinity=True)
 
@@ -99,20 +100,20 @@ dates = ['200601-200912',
 for date in dates:
     for field in ['so', 'thetao']:
         inFileName = '{}/{}_Omon_CCSM4_rcp85_r1i1p1_{}.nc'.format(
-                args.out_dir, field, date)
+            args.out_dir, field, date)
 
         outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_{}.nc'.format(
-                args.out_dir, field, date)
+            args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName, correctSalinity=False)
 
 for field in ['so', 'thetao']:
     outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc'.format(
-            args.out_dir, field)
+        args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
 
         # combine it all into a single data set
         ds = xarray.open_mfdataset('{}/{}_annual_CCSM4_*_r1i1p1_*.nc'.format(
-                args.out_dir, field), concat_dim='time')
+            args.out_dir, field), concat_dim='time')
         ds.to_netcdf(outFileName)
