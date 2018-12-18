@@ -1,0 +1,8 @@
+[parallel]
+tasks = 8
+
+[observations]
+compute = True
+
+[model]
+compute = False

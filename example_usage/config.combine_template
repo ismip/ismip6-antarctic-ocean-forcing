@@ -1,0 +1,57 @@
+[observations]
+compute = False
+
+[model]
+compute = False
+
+[climatology]
+## The range of time indices to use in climatology defining "present-day"
+# Should likely be the range of 1995-2012 to match the WOA climatology
+firstTIndex = @climFirstTIndex
+lastTIndex = @climLastTIndex
+
+# the output folder
+folder = climatology_@climDecades
+
+# dimension (either time or z, but not both) across which the individual data
+# sets differ
+dim = time
+
+# A comma-separated list of folders to combine
+folders = @climFolders
+
+# The output folder for the combined time series containing all years in the
+# climatology
+outFolder = climatology_@climDecades/output
+
+
+[output]
+# min/max time index (-1 for the end of the time variable)
+tIndexMin = @tIndexMin
+tIndexMax = @tIndexMax
+
+
+[combine]
+# is there data to combine
+combine = True
+
+# dimension (either time or z, but not both) across which the individual data
+# sets differ
+dim = time
+
+# A comma-separated list of folders to combine
+folders = @folders
+
+# The output folder
+outFolder = @outFolder/output
+
+
+[anomaly]
+## Config options related to the anomaly and its combination with WOA
+
+# the folder for the anomaly data set
+folder = @outFolder/anomaly_@climDecades
+
+# the folder for WOA plus the anomaly
+obsFolder = @outFolder/anomaly_@climDecades_plus_obs
+
