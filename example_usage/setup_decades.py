@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 
+
 def replace(inFileName, outFileName, replacements):
     with open(inFileName, 'rt') as fin:
         with open(outFileName, 'wt') as fout:
@@ -9,10 +10,11 @@ def replace(inFileName, outFileName, replacements):
                     line = line.replace(orig, replacements[orig])
                 fout.write(line)
 
+
 climFirstYear = 1995
 climLastYear = 2014
 climOutFolder = '{:04d}-{:04d}'.format(climFirstYear, climLastYear)
-climFolders = ', '.join(['{:04d}'.format(year) for year in 
+climFolders = ', '.join(['{:04d}'.format(year) for year in
                          range(climFirstYear, climLastYear+1)])
 
 firstYears = list(range(1850, 1994, 20)) + list(range(1995, 2100, 20))
@@ -26,7 +28,7 @@ for firstYear in firstYears:
         lastYear = firstYear+19
 
     outFolder = '{:04d}-{:04d}'.format(firstYear, lastYear)
-    folders = ', '.join(['{:04d}'.format(year) for year in 
+    folders = ', '.join(['{:04d}'.format(year) for year in
                          range(firstYear, lastYear+1)])
     print(outFolder)
     try:
@@ -41,8 +43,8 @@ for firstYear in firstYears:
                     '@tIndexMax': '{}'.format(lastYear-1850),
                     '@climDecades': climOutFolder,
                     '@climFolders': climFolders,
-                    '@climFirstTIndex':'0',
-                    '@climLastTIndex':'{}'.format(climLastYear-climFirstYear)}
+                    '@climFirstTIndex': '0',
+                    '@climLastTIndex': '{}'.format(climLastYear-climFirstYear)}
     templateFileName = 'config.combine_template'
     outFileName = '{}/config.ccsm4'.format(outFolder)
     replace(templateFileName, outFileName, replacements)

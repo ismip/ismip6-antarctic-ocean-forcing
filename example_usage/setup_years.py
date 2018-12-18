@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 
+
 def replace(inFileName, outFileName, replacements):
     with open(inFileName, 'rt') as fin:
         with open(outFileName, 'wt') as fout:

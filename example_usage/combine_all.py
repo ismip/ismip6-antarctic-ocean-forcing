@@ -30,10 +30,9 @@ for firstYear, lastYear in [(1850, 1994), (1995, 2100)]:
             last = min(first + 19, lastYear)
             inFileNames.append('{:04d}-{:04d}/anomaly_{:04d}-{:04d}_plus_obs/'
                                'CCSM4_{}_8km_x_60m.nc'.format(
-                               first, last, climFirstYear, climLastYear, field))
+                                   first, last, climFirstYear, climLastYear, field))
         ds = xarray.open_mfdataset(inFileNames)
         ds[field] = ds[field].astype(numpy.float32)
         ds[field].attrs['units'] = units[field]
         ds[field].attrs['long_name'] = longNames[field]
         ds.to_netcdf(outFileName)
-
