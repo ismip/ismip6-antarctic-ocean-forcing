@@ -488,7 +488,6 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
 
     nt, nz, ny, nx = field3D.shape
 
-    nanMask = numpy.logical_not(numpy.logical_or(valid, fillMask))
 
     outField = field3D[:, zIndex, :, :]
 
@@ -498,14 +497,15 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
     basinFillCount = numpy.count_nonzero(basinFillMask)
     validCount = numpy.count_nonzero(valid)
 
-    iterMask = numpy.logical_not(numpy.logical_or(valid, fillMask))
+    validAfterFill = numpy.logical_or(valid, fillMask)
+    invalidAfterFill = numpy.logical_not(validAfterFill)
 
     if replaceValidWithSmoothed:
-        mask = numpy.logical_or(valid, fillMask)
+        replaceMask = validAfterFill
     else:
-        mask = fillMask.copy()
+        replaceMask = fillMask.copy()
 
-    maskSmooth = convolve2d(mask, smoothingKernel, mode='same')
+    maskSmooth = convolve2d(validAfterFill, smoothingKernel, mode='same')
 
     for tIndex in range(nt):
         fieldSlice = outField[tIndex, :, :]
@@ -514,7 +514,7 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
             fieldExtrap[numpy.logical_not(valid)] = 0.
             fieldExtrap[numpy.isnan(fieldExtrap)] = 0.
             fieldExtrap = convolve2d(fieldExtrap, extrapKernel, mode='same')
-            fieldExtrap[iterMask] = 0.
+            fieldExtrap[invalidAfterFill] = 0.
 
             rhs = fieldExtrap[fillMask]/weightSum
 
@@ -524,13 +524,14 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
             fieldSlice[fillMask] = numpy.nan
 
         # now, smooth the result over many iterations
-        fieldSlice[iterMask] = 0.
+        fieldSlice[invalidAfterFill] = 0.
         for iterIndex in range(smoothingIterations):
             fieldSmooth = convolve2d(fieldSlice, smoothingKernel, mode='same')
-            fieldSmooth[iterMask] = 0.
-            fieldSlice[mask] = fieldSmooth[mask]/maskSmooth[mask]
+            fieldSmooth[invalidAfterFill] = 0.
+            fieldSlice[replaceMask] = \
+                fieldSmooth[replaceMask]/maskSmooth[replaceMask]
 
-        fieldSlice[nanMask] = numpy.nan
+        fieldSlice[invalidAfterFill] = numpy.nan
 
         outField[tIndex, :, :] = fieldSlice
 

@@ -1,5 +1,6 @@
 import os
 import xarray
+import warnings
 from ismip6_ocean_forcing.thermal_forcing.main import compute_thermal_forcing
 from ismip6_ocean_forcing.remap.res import get_res
 
@@ -88,7 +89,9 @@ def _compute_climatology(config):
         print('    {}'.format(outFileName))
         ds = xarray.open_dataset(inFileName)
         ds = ds.isel(time=slice(firstTIndex, lastTIndex+1))
-        ds = ds.mean(dim='time')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            ds = ds.mean(dim='time')
         ds.to_netcdf(outFileName)
 
 
