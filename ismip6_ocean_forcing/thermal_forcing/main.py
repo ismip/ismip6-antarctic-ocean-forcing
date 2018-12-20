@@ -87,7 +87,7 @@ def potential_to_in_situ_temperature(dsPotTemp, dsSalin):
     lon = dsPotTemp.lon.values
 
     if len(lat.shape) == 1:
-       lon, lat = numpy.meshgrid(lon, lat)
+        lon, lat = numpy.meshgrid(lon, lat)
 
     nz = len(z)
     ny, nx = lat.shape

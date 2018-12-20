@@ -103,28 +103,28 @@ for date in dates:
         compute_yearly_mean(inFileName, outFileName)
 
 dates = ['200601-200912',
-         '201001-201312',  
-         '201401-201712',  
-         '201801-202112',  
-         '202201-202512',  
-         '202601-202912',  
-         '203001-203312',  
-         '203401-203712',  
-         '203801-204112',  
-         '204201-204512',  
-         '204601-204912',  
-         '205001-205312',  
-         '205401-205712',  
-         '205801-206112',  
-         '206201-206512',  
-         '206601-206912',  
-         '207001-207312',  
-         '207401-207712',  
-         '207801-208112',  
-         '208201-208512',  
-         '208601-208912',  
-         '209001-209312',  
-         '209401-209712',  
+         '201001-201312',
+         '201401-201712',
+         '201801-202112',
+         '202201-202512',
+         '202601-202912',
+         '203001-203312',
+         '203401-203712',
+         '203801-204112',
+         '204201-204512',
+         '204601-204912',
+         '205001-205312',
+         '205401-205712',
+         '205801-206112',
+         '206201-206512',
+         '206601-206912',
+         '207001-207312',
+         '207401-207712',
+         '207801-208112',
+         '208201-208512',
+         '208601-208912',
+         '209001-209312',
+         '209401-209712',
          '209801-210012']
 
 for date in dates:
@@ -138,12 +138,14 @@ for date in dates:
         compute_yearly_mean(inFileName, outFileName)
 
 for field in ['so', 'thetao']:
-    outFileName = '{}/{}_annual_NorESM1-M_rcp85_r1i1p1_185001-210012.nc'.format(
-        args.out_dir, field)
+    outFileName = \
+        '{}/{}_annual_NorESM1-M_rcp85_r1i1p1_185001-210012.nc'.format(
+            args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
 
         # combine it all into a single data set
-        ds = xarray.open_mfdataset('{}/{}_annual_NorESM1-M_*_r1i1p1_*.nc'.format(
-            args.out_dir, field), concat_dim='time')
+        ds = xarray.open_mfdataset(
+            '{}/{}_annual_NorESM1-M_*_r1i1p1_*.nc'.format(
+                args.out_dir, field), concat_dim='time')
         ds.to_netcdf(outFileName)

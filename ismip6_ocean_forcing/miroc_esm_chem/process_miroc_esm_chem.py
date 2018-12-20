@@ -54,15 +54,16 @@ def compute_yearly_mean(inFileName, outFileName):
     # add the depth coordinate
     # for k <= nsigma: z = eta + sigma*(min(depth_c,depth)+eta)
     # for k > nsigma: z = zlev
-    zIndex = xarray.DataArray.from_dict({'dims': ('lev',),
-                                         'data': numpy.arange(ds.sizes['lev'])})
+    zIndex = xarray.DataArray.from_dict(
+        {'dims': ('lev',),
+         'data': numpy.arange(ds.sizes['lev'])})
     zIndex.coords['lev'] = ds.lev
     z = ds.eta + ds.sigma*(numpy.minimum(ds.depth_c, ds.depth) + ds.eta)
     z = z.transpose('time', 'lev', 'lat', 'lon')
     z = z.where(zIndex < ds.nsigma, -ds.zlev)
 
-    z_bnds = ds.eta + ds.sigma_bnds*(numpy.minimum(ds.depth_c, ds.depth) \
-             + ds.eta)
+    z_bnds = ds.eta + ds.sigma_bnds*(numpy.minimum(ds.depth_c, ds.depth) +
+                                     ds.eta)
     z_bnds = z_bnds.transpose('time', 'lev', 'lat', 'lon', 'bnds')
     z_bnds = z_bnds.where(zIndex < ds.nsigma, -ds.zlev_bnds)
 
@@ -89,7 +90,7 @@ def compute_yearly_mean(inFileName, outFileName):
 
     ds.coords['z_bnds'] = -ds.zlev_bnds
 
-    ds = ds.drop(['eta', 'depth_c', 'depth', 'sigma', 'nsigma', 
+    ds = ds.drop(['eta', 'depth_c', 'depth', 'sigma', 'nsigma',
                   'sigma_bnds', 'zlev', 'zlev_bnds', 'lev_bnds'])
 
     ds.to_netcdf(outFileName)
@@ -114,11 +115,13 @@ dates = ['185001-185912',
 
 for date in dates:
     for field in ['so', 'thetao']:
-        inFileName = '{}/{}_Omon_MIROC-ESM-CHEM_historical_r1i1p1_{}.nc'.format(
-            args.out_dir, field, date)
+        inFileName = \
+            '{}/{}_Omon_MIROC-ESM-CHEM_historical_r1i1p1_{}.nc'.format(
+                args.out_dir, field, date)
 
-        outFileName = '{}/{}_annual_MIROC-ESM-CHEM_historical_r1i1p1_{}.nc'.format(
-            args.out_dir, field, date)
+        outFileName = \
+            '{}/{}_annual_MIROC-ESM-CHEM_historical_r1i1p1_{}.nc'.format(
+                args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName)
 
@@ -144,12 +147,14 @@ for date in dates:
         compute_yearly_mean(inFileName, outFileName)
 
 for field in ['so', 'thetao']:
-    outFileName = '{}/{}_annual_MIROC-ESM-CHEM_rcp85_r1i1p1_185001-210012.nc'.format(
-        args.out_dir, field)
+    outFileName = \
+        '{}/{}_annual_MIROC-ESM-CHEM_rcp85_r1i1p1_185001-210012.nc'.format(
+            args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
 
         # combine it all into a single data set
-        ds = xarray.open_mfdataset('{}/{}_annual_MIROC-ESM-CHEM_*_r1i1p1_*.nc'.format(
-            args.out_dir, field), concat_dim='time')
+        ds = xarray.open_mfdataset(
+            '{}/{}_annual_MIROC-ESM-CHEM_*_r1i1p1_*.nc'.format(
+                args.out_dir, field), concat_dim='time')
         ds.to_netcdf(outFileName)
