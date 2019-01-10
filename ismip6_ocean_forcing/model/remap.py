@@ -34,6 +34,9 @@ def _fix_units_and_periodicity(config, modelFolder):
     for varName in ['lat', 'lon', 'z', 'time', 'temperature', 'salinity',
                     'z_bnds']:
         oldVarName = config.get('model', varName)
+        if varName == oldVarName:
+            continue
+
         renameDict[oldVarName] = varName
 
     inFileNames = {}
@@ -63,8 +66,10 @@ def _fix_units_and_periodicity(config, modelFolder):
         ds = xarray.open_dataset(inFileName)
         for name in renameDict:
             if name in ds:
+                newName = renameDict[name]
+                if newName in ds:
+                    ds = ds.drop(newName)
                 ds = ds.rename({name: renameDict[name]})
-        dropList = []
 
         ds = ds.isel(time=slice(tIndexMin, tIndexMax))
 
@@ -72,6 +77,7 @@ def _fix_units_and_periodicity(config, modelFolder):
             if coord not in keepList:
                 ds = ds.drop(coord)
 
+        dropList = []
         for var in ds.data_vars:
             if var not in keepList:
                 dropList.append(var)
