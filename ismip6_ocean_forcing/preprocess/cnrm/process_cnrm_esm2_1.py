@@ -61,6 +61,7 @@ def compute_yearly_mean(inFileName, outFileName):
     encoding = {'time': {'units': 'days since 0000-01-01'}}
     ds.to_netcdf(outFileName, encoding=encoding)
 
+
 model = 'CNRM-ESM2-1'
 run = 'r1i1p1f2'
 

@@ -72,6 +72,7 @@ def compute_yearly_mean(inFileName, outFileName, tempFileName):
     encoding = {'time': {'units': 'days since 0000-01-01'}}
     ds.to_netcdf(outFileName, encoding=encoding)
 
+
 model = 'CESM2'
 run = 'e21_f09_g17'
 
