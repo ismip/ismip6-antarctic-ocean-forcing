@@ -15,7 +15,7 @@ templates:
 ```bash
 conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
     matplotlib netCDF4 xarray progressbar2 basemap descartes cartopy shapely \
-    nco gsw scikit-fmm phshp
+    nco gsw scikit-fmm pyshp dask imageio
 
 conda activate ismip6_ocean_forcing
 ```

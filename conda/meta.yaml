@@ -39,7 +39,9 @@ requirements:
         - nco
         - gsw
         - scikit-fmm
-        - phshp
+        - pyshp
+        - dask
+        - imageio
 about:
     home:  http://gitub.com/xylar/ismip6-ocean-forcing
     license: MIT
