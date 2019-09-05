@@ -26,6 +26,6 @@ setup(name='ismip6_ocean_forcing',
       package_data={'ismip6_ocean_forcing': ['config.default']},
       install_requires=['numpy', 'scipy', 'matplotlib', 'netCDF4', 'xarray',
                         'progressbar2', 'basemap', 'descartes', 'cartopy',
-                        'shapely', 'gsw', 'scikit-fmm', ' phshp'],
+                        'shapely', 'gsw', 'scikit-fmm', ' pyshp', 'imageio'],
       entry_points={'console_scripts':
                     ['ismip6_ocean_forcing = ismip6_ocean_forcing.__main__:main']})

@@ -1,6 +1,6 @@
 import numpy
 import xarray
-from scipy import misc
+import imageio
 import skfmm
 import os
 
@@ -24,7 +24,7 @@ def extend_imbie_masks(res, basins, bedFileName):
     for index, basinName in enumerate(basins.keys()):
         print('    {}'.format(basinName))
         imageFileName = 'imbie/basins_{}/{}.png'.format(res, basinName)
-        image = misc.imread(imageFileName)
+        image = imageio.imread(imageFileName)
         basinFraction = 1. - image[::-1, :, 0]/255.
         distance = skfmm.distance(-2.*basinFraction + 1)
         mask = distance < minDistance
