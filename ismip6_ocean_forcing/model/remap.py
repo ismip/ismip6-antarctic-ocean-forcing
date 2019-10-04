@@ -2,13 +2,10 @@ import xarray
 import os
 import numpy
 import progressbar
+from pyremap import get_polar_descriptor_from_file, LatLonGridDescriptor, \
+    LatLon2DGridDescriptor, Remapper
 
 from ismip6_ocean_forcing.remap.interp1d import remap_vertical
-
-from ismip6_ocean_forcing.remap.descriptor import get_antarctic_descriptor
-from ismip6_ocean_forcing.remap.grid import LatLonGridDescriptor, \
-    LatLon2DGridDescriptor
-from ismip6_ocean_forcing.remap.remapper import Remapper
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
 from ismip6_ocean_forcing.thermal_forcing.main import \
     potential_to_in_situ_temperature
@@ -201,7 +198,8 @@ def _remap(config, modelFolder):
             inDescriptor = LatLon2DGridDescriptor.read(
                     inFileName, latVarName='lat', lonVarName='lon')
         inDescriptor.regional = True
-        outDescriptor = get_antarctic_descriptor(outGridFileName)
+        outDescriptor = get_polar_descriptor_from_file(outGridFileName,
+                                                       projection='antarctic')
 
         mappingFileName = '{}/map_{}_to_{}.nc'.format(
                 modelName.lower(), inDescriptor.meshName,

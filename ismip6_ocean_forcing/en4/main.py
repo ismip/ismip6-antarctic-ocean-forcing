@@ -4,11 +4,10 @@ import numpy
 import glob
 import progressbar
 import zipfile
+from pyremap.polar import get_antarctic_stereographic_projection
 
 from ismip6_ocean_forcing.io import download_files
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
-from ismip6_ocean_forcing.remap.polar import \
-    get_antarctic_stereographic_projection
 from ismip6_ocean_forcing.thermal_forcing.main import \
     potential_to_in_situ_temperature
 
