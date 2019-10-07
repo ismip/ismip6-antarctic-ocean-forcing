@@ -5,11 +5,10 @@ import glob
 import gsw
 import progressbar
 import subprocess
+from pyremap.polar import get_antarctic_stereographic_projection
 
 from ismip6_ocean_forcing.io import download_files
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
-from ismip6_ocean_forcing.remap.polar import \
-    get_antarctic_stereographic_projection
 
 
 def process_meop(config):

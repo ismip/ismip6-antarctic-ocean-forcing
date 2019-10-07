@@ -3,13 +3,11 @@ import os
 import numpy
 import gsw
 
+from pyremap import get_polar_descriptor_from_file, LatLonGridDescriptor, \
+    Remapper
+
 from ismip6_ocean_forcing.remap.interp1d import weights_and_indices, \
     interp_depth
-
-from ismip6_ocean_forcing.remap.descriptor import get_antarctic_descriptor, \
-    get_lat_lon_descriptor
-
-from ismip6_ocean_forcing.remap.remapper import Remapper
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
 
 
@@ -152,8 +150,9 @@ def _remap(config, decades):
 
         varName = fieldName
 
-        inDescriptor = get_lat_lon_descriptor(inFileName)
-        outDescriptor = get_antarctic_descriptor(outGridFileName)
+        inDescriptor = LatLonGridDescriptor.read(fileName=inFileName)
+        outDescriptor = get_polar_descriptor_from_file(outGridFileName,
+                                                       projection='antarctic')
 
         mappingFileName = 'woa/map_{}_to_{}.nc'.format(inDescriptor.meshName,
                                                        outDescriptor.meshName)
