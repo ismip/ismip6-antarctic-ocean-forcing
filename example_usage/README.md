@@ -15,7 +15,7 @@ templates:
 ```bash
 conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
     matplotlib netCDF4 xarray progressbar2 basemap descartes cartopy shapely \
-    nco gsw scikit-fmm pyshp dask imageio
+    nco gsw scikit-fmm pyshp dask imageio "pyremap<0.1.0"
 
 conda activate ismip6_ocean_forcing
 ```
@@ -23,7 +23,7 @@ conda activate ismip6_ocean_forcing
 2. Clone the https://github.com/xylar/ismip6-ocean-forcing repo somewhere
 
 3. In the directory where you plan to process the data, create a link to the
-   ismip6_ocean_forcing subdirectory (not the repo, but one directory inside)
+   `ismip6_ocean_forcing` subdirectory (not the repo, but one directory inside)
 
 4. Download or copy `config.obs` and `job_script_obs.bash` from this directory
    into the same directory where you put the symlink
@@ -31,7 +31,7 @@ conda activate ismip6_ocean_forcing
 5. Modify config.obs as needed (mainly to change the number of parallel tasks
    -- threads -- you can afford to run on a single node of your machine)
 
-6. Modify and submit job_script_obs.bash or just run the python command if
+6. Modify and submit `job_script_obs.bash` or just run the python command if
    you're running on a machine where you don't need to submit jobs:
 ```bash
 python -m ismip6_ocean_forcing config.obs
