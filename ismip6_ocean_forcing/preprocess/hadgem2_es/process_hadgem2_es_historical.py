@@ -50,7 +50,20 @@ def compute_yearly_mean(inFileName, outFileName):
     ds.to_netcdf(outFileName)
 
 
-dates = ['198912-199911',
+dates = ['185912-186911',
+         '186912-187911',
+         '187912-188911',
+         '188912-189911',
+         '189912-190911',
+         '190912-191911',
+         '191912-192911',
+         '192912-193911',
+         '193912-194911',
+         '194912-195911',
+         '195912-196911',
+         '196912-197911',
+         '197912-198911',
+         '198912-199911',
          '199912-200512']
 
 for date in dates:
@@ -63,17 +76,7 @@ for date in dates:
 
         compute_yearly_mean(inFileName, outFileName)
 
-dates = ['200512-201511',
-         '201512-202511',
-         '202512-203511',
-         '203512-204511',
-         '204512-205511',
-         '205512-206511',
-         '206512-207511',
-         '207512-208511',
-         '208512-209511',
-         '209512-209912',
-         '209912-210911']
+dates = ['200512-201511']
 
 for date in dates:
     for field in ['so', 'thetao']:
@@ -87,7 +90,7 @@ for date in dates:
 
 for field in ['so', 'thetao']:
     outFileName = \
-        '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_199001-210012.nc'.format(
+        '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_186001-201412.nc'.format(
             args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
@@ -97,4 +100,5 @@ for field in ['so', 'thetao']:
             '{}/{}_annual_HadGEM2-ES_*_r1i1p1_*.nc'.format(
                 args.out_dir, field), combine='nested', concat_dim='time',
                 decode_times=False)
+        ds = ds.isel(time=slice(1, ds.sizes['time']-1))
         ds.to_netcdf(outFileName)
