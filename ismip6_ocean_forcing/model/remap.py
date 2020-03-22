@@ -242,7 +242,8 @@ def _remap(config, modelFolder):
         bar.finish()
 
         dsOut = xarray.open_mfdataset(
-            '{}/{}_t_*.nc'.format(progressDir, modelName), concat_dim='time')
+            '{}/{}_t_*.nc'.format(progressDir, modelName), combine='nested',
+            concat_dim='time')
 
         dsOut['z_bnds'] = ds.z_bnds
 
