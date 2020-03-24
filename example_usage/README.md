@@ -20,7 +20,8 @@ conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
 conda activate ismip6_ocean_forcing
 ```
 
-2. Clone the https://github.com/xylar/ismip6-ocean-forcing repo somewhere
+2. Clone the https://github.com/ismip/ismip6-antarctic-ocean-forcing repo
+   somewhere
 
 3. In the directory where you plan to process the data, create a link to the
    `ismip6_ocean_forcing` subdirectory (not the repo, but one directory inside)
