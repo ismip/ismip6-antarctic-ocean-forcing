@@ -58,7 +58,7 @@ def compute_thermal_forcing(temperatureFileName, salinityFileName, outFileName,
                                                       0.)
             thermalForcing[tIndex, zIndex, :, :] = thermalForcingLocal
 
-            widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
+            bar.widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
             bar.update(tIndex + nt*zIndex)
 
     bar.finish()

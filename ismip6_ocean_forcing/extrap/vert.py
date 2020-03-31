@@ -41,7 +41,7 @@ def extrap_vert(config, inFileName, outFileName, fieldName, timeIndices=None):
             fieldLocal[invalid] = fieldAbove[invalid]
             field3D[tIndex, zIndex, :, :] = fieldLocal
 
-            widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
+            bar.widgets[0] = '  z={}/{}: '.format(zIndex+1, nz)
             bar.update(tIndex + nt*zIndex)
 
     bar.finish()
