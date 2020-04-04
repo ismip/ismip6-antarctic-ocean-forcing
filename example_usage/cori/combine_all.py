@@ -2,6 +2,8 @@
 import os
 import xarray
 import numpy
+import argparse
+
 
 def combine(start, end, model, climFirstYear=1995, climLastYear=2014):
 
@@ -17,6 +19,8 @@ def combine(start, end, model, climFirstYear=1995, climLastYear=2014):
                                     ' freezing temperature)'}
     
     for firstYear, lastYear in [(start, climFirstYear-1), (climFirstYear, end)]:
+        if(firstYear > lastYear):
+            continue
         outFolder = '{:04d}-{:04d}'.format(firstYear, lastYear)
         try:
             os.makedirs(outFolder)
@@ -51,6 +55,5 @@ if __name__ == '__main__':
                     help="name of the model")
     args = parser.parse_args() 
 
-    setup_years(args.start, args.end, args.model, args.scenario, args.ensemble)
-    setup_decades(args.start, args.end, args.model)
+    combine(args.start, args.end, args.model)
 
