@@ -6,6 +6,7 @@ import numpy
 import os
 import warnings
 
+
 parser = argparse.ArgumentParser(
     description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-o', dest='out_dir', metavar='DIR',
@@ -53,7 +54,7 @@ def compute_yearly_mean(inFileName, outFileName):
 starts = list(range(1850, 2010, 10))
 ends = list(range(1859, 2010, 10))
 ends[-1] = 2005
-dates = ['{}01-{}12'.format(starts[index], ends[index]) for index in 
+dates = ['{}01-{}12'.format(starts[index], ends[index]) for index in
          range(len(starts))]
 
 for date in dates:
@@ -61,8 +62,9 @@ for date in dates:
         inFileName = '{}/{}_Omon_CSIRO-Mk3-6-0_historical_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
-        outFileName = '{}/{}_annual_CSIRO-Mk3-6-0_historical_r1i1p1_{}.nc'.format(
-            args.out_dir, field, date)
+        outFileName = \
+            '{}/{}_annual_CSIRO-Mk3-6-0_historical_r1i1p1_{}.nc'.format(
+                args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName)
 
@@ -88,7 +90,7 @@ for field in ['so', 'thetao']:
         # combine it all into a single data set
         ds = xarray.open_mfdataset(
             '{}/{}_annual_CSIRO-Mk3-6-0_*_r1i1p1_*.nc'.format(
-                args.out_dir, field), 
+                args.out_dir, field),
             combine='nested', concat_dim='time', use_cftime=True)
         mask = ds['time.year'] <= 2014
         tIndices = numpy.nonzero(mask.values)[0]

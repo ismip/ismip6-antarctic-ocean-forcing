@@ -95,6 +95,6 @@ for field in ['so', 'thetao']:
         # combine it all into a single data set
         ds = xarray.open_mfdataset(
             '{}/{}_annual_HadGEM2-ES_*_r1i1p1_*.nc'.format(
-                args.out_dir, field), combine='nested', concat_dim='time',
-                decode_times=False)
+                args.out_dir, field),
+            combine='nested', concat_dim='time', decode_times=False)
         ds.to_netcdf(outFileName)

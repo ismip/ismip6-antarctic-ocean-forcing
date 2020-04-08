@@ -7,19 +7,17 @@ import argparse
 
 def combine(start, end, model, climFirstYear=1995, climLastYear=2014):
 
-    climYears = '{:04d}-{:04d}'.format(climFirstYear, climLastYear)
-    
     units = {'temperature': 'Degrees C',
              'salinity': 'PSU',
              'thermal_forcing': 'Degrees C'}
-    
+
     longNames = {'temperature': 'In Situ Seawater Temperature',
                  'salinity': 'Seawater Salinity',
                  'thermal_forcing': 'Thermal Forcing (in situ Temperature minus'
                                     ' freezing temperature)'}
-    
+
     for firstYear, lastYear in [(start, climFirstYear-1), (climFirstYear, end)]:
-        if(firstYear > lastYear):
+        if firstYear > lastYear:
             continue
         outFolder = '{:04d}-{:04d}'.format(firstYear, lastYear)
         try:
@@ -48,12 +46,11 @@ def combine(start, end, model, climFirstYear=1995, climLastYear=2014):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", dest="start", type=int,
-                    help="start year of the time series")
+                        help="start year of the time series")
     parser.add_argument("-e", dest="end", type=int,
-                    help="end year of the time series")
+                        help="end year of the time series")
     parser.add_argument("-m", dest="model", type=str,
-                    help="name of the model")
-    args = parser.parse_args() 
+                        help="name of the model")
+    args = parser.parse_args()
 
     combine(args.start, args.end, args.model)
-

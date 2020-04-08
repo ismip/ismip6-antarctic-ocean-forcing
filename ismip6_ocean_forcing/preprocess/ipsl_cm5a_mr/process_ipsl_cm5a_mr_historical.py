@@ -63,8 +63,9 @@ for date in dates:
         inFileName = '{}/{}_Omon_IPSL-CM5A-MR_historical_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
-        outFileName = '{}/{}_annual_IPSL-CM5A-MR_historical_r1i1p1_{}.nc'.format(
-            args.out_dir, field, date)
+        outFileName = \
+            '{}/{}_annual_IPSL-CM5A-MR_historical_r1i1p1_{}.nc'.format(
+                args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName)
 
@@ -95,7 +96,7 @@ for scenario in ['rcp26', 'rcp85']:
                 files = files + glob.glob(
                     '{}/{}_annual_IPSL-CM5A-MR_{}_r1i1p1_*.nc'.format(
                          args.out_dir, field, expt))
-            
+
             ds = xarray.open_mfdataset(files, combine='nested',
                                        concat_dim='time', use_cftime=True)
             mask = ds['time.year'] <= 2014

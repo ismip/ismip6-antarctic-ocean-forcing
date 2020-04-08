@@ -21,7 +21,7 @@ def setup_years(start, end, model, scenario, ensemble):
             os.makedirs(yearString)
         except OSError:
             pass
-    
+
         replacements = {'@tIndex': '{}'.format(tIndex),
                         '@modelLower': model.lower(),
                         '@modelUpper': model,
@@ -37,19 +37,20 @@ def setup_years(start, end, model, scenario, ensemble):
         outFileName = '{}/job_script.bash'.format(yearString)
         replace(templateFileName, outFileName, replacements)
 
+
 def setup_decades(start, end, model, climStart=1995, climEnd=2014,
                   block=20):
-    
+
     climOutFolder = '{:04d}-{:04d}'.format(climStart, climEnd)
     climFolders = ', '.join(['{:04d}'.format(year) for year in
                              range(climStart, climEnd+1)])
 
     histStart = numpy.array(range(start, climStart-1, block), dtype=int)
     histEnd = numpy.minimum(histStart+block-1, climStart-1)
-    
+
     scenarioStart = numpy.array(range(climStart, end, block), dtype=int)
     scenarioEnd = numpy.minimum(scenarioStart+block-1, end)
-    
+
     firstYears = numpy.append(histStart, scenarioStart)
     lastYears = numpy.append(histEnd, scenarioEnd)
 
@@ -62,7 +63,7 @@ def setup_decades(start, end, model, climStart=1995, climEnd=2014,
             os.makedirs(outFolder)
         except OSError:
             pass
-    
+
         replacements = {'@outFolder': outFolder,
                         '@folders': folders,
                         '@modelLower': model.lower(),
@@ -85,17 +86,16 @@ def setup_decades(start, end, model, climStart=1995, climEnd=2014,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", dest="start", type=int,
-                    help="start year of the time series")
+                        help="start year of the time series")
     parser.add_argument("-e", dest="end", type=int,
-                    help="end year of the time series")
+                        help="end year of the time series")
     parser.add_argument("-m", dest="model", type=str,
-                    help="name of the model")
+                        help="name of the model")
     parser.add_argument("--scenario", dest="scenario", type=str,
-                    help="scenario (rcp85, ssp585, etc.)")
+                        help="scenario (rcp85, ssp585, etc.)")
     parser.add_argument("--ensemble", dest="ensemble", type=str,
-                    help="ensemble member (r1i1p1, etc.)")
-    args = parser.parse_args() 
+                        help="ensemble member (r1i1p1, etc.)")
+    args = parser.parse_args()
 
     setup_years(args.start, args.end, args.model, args.scenario, args.ensemble)
     setup_decades(args.start, args.end, args.model)
-
