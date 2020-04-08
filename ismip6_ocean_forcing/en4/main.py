@@ -130,6 +130,8 @@ def _bin_en4(config, inVarName, outVarName, startYear, endYear):
 
         lat = numpy.maximum(lat, -75.)
         for profile in range(depths.shape[0]):
+            if not (numpy.isfinite(x[profile]) and numpy.isfinite(y[profile])):
+                continue
             xBin = int((x[profile]-xMin)/dx)
             yBin = int((y[profile]-yMin)/dx)
             if xBin < 0 or xBin >= nx:

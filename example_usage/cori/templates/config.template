@@ -1,0 +1,39 @@
+[parallel]
+tasks = 8
+
+
+[observations]
+compute = False
+
+
+[output]
+## Options related to the time and depth indices to include in the analysis
+
+# min/max time index (-1 for the end of the time variable)
+tIndexMin = @tIndex
+tIndexMax = @tIndex
+
+
+[model]
+## Config options related to the model to extrapolate forcing for
+
+compute = True
+
+# The name of the model
+name = @modelUpper
+
+# Input files
+temperatureFileName = @modelLower/thetao_annual_@modelUpper_@scenario_@ensemble_@start01-@end12.nc
+salinityFileName = @modelLower/so_annual_@modelUpper_@scenario_@ensemble_@start01-@end12.nc
+
+# Variable names
+lon = lon
+lat = lat
+z = lev
+time = time
+temperature = thetao
+salinity = so
+z_bnds = lev_bnds
+
+# Output folder
+folder = @year

@@ -57,7 +57,8 @@ def _combine_model_output(config, section):
             continue
 
         print('    {}'.format(outFileName))
-        ds = xarray.open_mfdataset(fileNames, concat_dim=combineDim)
+        ds = xarray.open_mfdataset(fileNames, combine='nested',
+                                   concat_dim=combineDim)
         for coord in ['lat', 'lon']:
             if coord in ds.coords and 'time' in ds.coords[coord].dims:
                 ds.coords[coord] = ds.coords[coord].isel(time=0, drop=True)

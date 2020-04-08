@@ -13,39 +13,28 @@ parser.add_argument('-o', dest='out_dir', metavar='DIR', required=True,
 args = parser.parse_args()
 
 
-def compute_yearly_mean(inFileName, outFileName, tempFileName):
+def compute_yearly_mean(inFileName, outFileName):
     # crop to below 48 S and take annual mean over the data
     if os.path.exists(outFileName):
         return
     print('{} to {}'.format(inFileName, outFileName))
 
-    dsIn = xarray.open_dataset(inFileName, chunks={'time': 24})
-    dsIn = dsIn.rename({'z_t': 'lev', 'd2': 'bnds', 'TLONG': 'lon',
-                        'TLAT': 'lat'})
-    ds = xarray.Dataset()
-    if 'SALT' in dsIn:
-        ds['so'] = dsIn['SALT']
-    if 'TEMP' in dsIn:
-        ds['thetao'] = dsIn['TEMP']
-    ds.coords['lev'] *= 0.01
-    ds.lev.attrs['units'] = 'm'
-    ds.lev.attrs['bounds'] = 'lev_bnds'
-    lev_bnds = numpy.zeros((dsIn.sizes['lev'], dsIn.sizes['bnds']))
-    lev_bnds[:, 0] = 0.01*dsIn.z_w_top
-    lev_bnds[:, 1] = 0.01*dsIn.z_w_bot
-    ds.coords['lev_bnds'] = (('lev', 'bnds'), lev_bnds)
-    ds = ds.drop(['ULONG', 'ULAT'])
+    ds = xarray.open_dataset(inFileName)
+    ds = ds.rename({'lev_bounds': 'lev_bnds',
+                    'bounds_lon': 'lon_vertices',
+                    'bounds_lat': 'lat_vertices',
+                    'axis_nbounds': 'bnds'})
+
+    ds = ds.drop('time_bounds')
 
     # crop to Southern Ocean
-    minLat = ds.lat.min(dim='nlon')
+    minLat = ds.lat.min(dim='x')
     mask = minLat <= -48.
     yIndices = numpy.nonzero(mask.values)[0]
-    ds = ds.isel(nlat=yIndices)
+    ds = ds.isel(y=yIndices)
 
-    # write out and read back to get a clean start
-    ds.to_netcdf(tempFileName)
-    ds.close()
-    ds = xarray.open_dataset(tempFileName)
+    for coord in ['lev_bnds', 'lon_vertices', 'lat_vertices']:
+        ds.coords[coord] = ds[coord]
 
     # annual mean
     with warnings.catch_warnings():
@@ -73,54 +62,54 @@ def compute_yearly_mean(inFileName, outFileName, tempFileName):
     ds.to_netcdf(outFileName, encoding=encoding)
 
 
-model = 'CESM2'
-run = 'e21_f09_g17'
+model = 'CNRM-CM6-1'
+run = 'r1i1p1f2'
 
-dates = {'thetao': ['195001-199912',
+dates = {'thetao': ['185001-187412',
+                    '187501-189912',
+                    '190001-192412',
+                    '192501-194912',
+                    '195001-197412',
+                    '197501-199912',
                     '200001-201412'],
-         'so': ['195001-199912',
+         'so': ['185001-189912',
+                '190001-194912',
+                '195001-199912',
                 '200001-201412']}
-
-inField = {'thetao': 'TEMP', 'so': 'SALT'}
 
 histFiles = {}
 for field in dates:
     histFiles[field] = []
     for date in dates[field]:
-        inFileName = '{}/b.e21.BHIST.f09_g17.CMIP6-historical.011.pop.h.' \
-                     '{}.{}.nc'.format(args.out_dir, inField[field], date)
+        inFileName = '{}/{}_Omon_{}_historical_{}_gn_{}.nc'.format(
+            args.out_dir, field, model, run, date)
 
-        tempFileName = '{}/temp.nc'.format(args.out_dir)
         outFileName = '{}/{}_annual_{}_historical_{}_{}.nc'.format(
             args.out_dir, field, model, run, date)
 
-        compute_yearly_mean(inFileName, outFileName, tempFileName)
+        compute_yearly_mean(inFileName, outFileName)
         histFiles[field].append(outFileName)
 
-dates = {'thetao': ['201501-206412',
-                    '206501-210012'],
-         'so': ['201501-206412',
-                '206501-210012']}
-for scenario in ['ssp585']:
+dates = {'thetao': [],
+         'so': []}
+for scenario in ['ssp126', 'ssp585']:
     scenarioFiles = {}
     for field in dates:
         scenarioFiles[field] = []
         for date in dates[field]:
-            inFileName = '{}/b.e21.BSSP585cmip6.f09_g17.CMIP6-SSP5-8.5.002.' \
-                         'pop.h.{}.{}.nc'.format(args.out_dir, inField[field],
-                                                 date)
-
-            tempFileName = '{}/temp.nc'.format(args.out_dir)
+            inFileName = '{}/{}_Omon_{}_{}_{}_gn_{}.nc'.format(
+                args.out_dir, field, model, scenario, run, date)
 
             outFileName = '{}/{}_annual_{}_{}_{}_{}.nc'.format(
                 args.out_dir, field, model, scenario, run, date)
 
-            compute_yearly_mean(inFileName, outFileName, tempFileName)
+            compute_yearly_mean(inFileName, outFileName)
             scenarioFiles[field].append(outFileName)
 
+for scenario in ['historical']:
     for field in ['so', 'thetao']:
         outFileName = \
-            '{}/{}_annual_{}_{}_{}_199501-210012.nc'.format(
+            '{}/{}_annual_{}_{}_{}_185001-201412.nc'.format(
                 args.out_dir, field, model, scenario, run)
         if not os.path.exists(outFileName):
             print(outFileName)
@@ -130,7 +119,7 @@ for scenario in ['ssp585']:
                                        combine='nested', concat_dim='time',
                                        use_cftime=True)
 
-            mask = ds['time.year'] >= 1995
+            mask = ds['time.year'] <= 2014
             tIndices = numpy.nonzero(mask.values)[0]
             ds = ds.isel(time=tIndices)
             encoding = {'time': {'units': 'days since 0000-01-01'}}

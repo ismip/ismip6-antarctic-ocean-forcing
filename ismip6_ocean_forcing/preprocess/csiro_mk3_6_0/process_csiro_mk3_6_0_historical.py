@@ -6,6 +6,7 @@ import numpy
 import os
 import warnings
 
+
 parser = argparse.ArgumentParser(
     description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-o', dest='out_dir', metavar='DIR',
@@ -22,7 +23,7 @@ def compute_yearly_mean(inFileName, outFileName):
     ds = xarray.open_dataset(inFileName)
 
     # crop to Southern Ocean
-    ds = ds.isel(lat=slice(0, 43))
+    ds = ds.isel(lat=slice(0, 44))
 
     for coord in ['lev_bnds', 'lon_bnds', 'lat_bnds']:
         ds.coords[coord] = ds[coord]
@@ -50,51 +51,49 @@ def compute_yearly_mean(inFileName, outFileName):
     ds.to_netcdf(outFileName)
 
 
-dates = ['198912-199911',
-         '199912-200512']
+starts = list(range(1850, 2010, 10))
+ends = list(range(1859, 2010, 10))
+ends[-1] = 2005
+dates = ['{}01-{}12'.format(starts[index], ends[index]) for index in
+         range(len(starts))]
 
 for date in dates:
     for field in ['so', 'thetao']:
-        inFileName = '{}/{}_Omon_HadGEM2-ES_historical_r1i1p1_{}.nc'.format(
+        inFileName = '{}/{}_Omon_CSIRO-Mk3-6-0_historical_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
-        outFileName = '{}/{}_annual_HadGEM2-ES_historical_r1i1p1_{}.nc'.format(
-            args.out_dir, field, date)
+        outFileName = \
+            '{}/{}_annual_CSIRO-Mk3-6-0_historical_r1i1p1_{}.nc'.format(
+                args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName)
 
-dates = ['200512-201511',
-         '201512-202511',
-         '202512-203511',
-         '203512-204511',
-         '204512-205511',
-         '205512-206511',
-         '206512-207511',
-         '207512-208511',
-         '208512-209511',
-         '209512-209912',
-         '209912-210911']
+dates = ['200601-201512']
 
 for date in dates:
     for field in ['so', 'thetao']:
-        inFileName = '{}/{}_Omon_HadGEM2-ES_rcp85_r1i1p1_{}.nc'.format(
+        inFileName = '{}/{}_Omon_CSIRO-Mk3-6-0_rcp85_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
-        outFileName = '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_{}.nc'.format(
+        outFileName = '{}/{}_annual_CSIRO-Mk3-6-0_rcp85_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
         compute_yearly_mean(inFileName, outFileName)
 
 for field in ['so', 'thetao']:
     outFileName = \
-        '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_199001-210012.nc'.format(
+        '{}/{}_annual_CSIRO-Mk3-6-0_rcp85_r1i1p1_185001-201412.nc'.format(
             args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
 
         # combine it all into a single data set
         ds = xarray.open_mfdataset(
-            '{}/{}_annual_HadGEM2-ES_*_r1i1p1_*.nc'.format(
+            '{}/{}_annual_CSIRO-Mk3-6-0_*_r1i1p1_*.nc'.format(
                 args.out_dir, field),
-            combine='nested', concat_dim='time', decode_times=False)
+            combine='nested', concat_dim='time', use_cftime=True)
+        mask = ds['time.year'] <= 2014
+        tIndices = numpy.nonzero(mask.values)[0]
+        ds = ds.isel(time=tIndices)
+        encoding = {'time': {'units': 'days since 0000-01-01'}}
         ds.to_netcdf(outFileName)

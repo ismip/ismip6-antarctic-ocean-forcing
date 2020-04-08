@@ -1,18 +1,25 @@
 Download and Process CESM2 thetao and so
 ========================================
 
-These data are available on the ISMIP6 lftp server.  The files are in the
-subdirectory `/GSFC/Kate`.  The files needed are:
+An Earth System Grid account is required to download the CESM2
+CMIP6 data sets from which the forcing time series is derived.  Log
+in to your account, go to CMIP6, select CESM as the
+Source ID; historical as the Experiment IC; r11i1p1f1 as
+the Variant Label; and so and thetao in Variables.  Click "Search".  You many
+want to choose "Show All Replicas" and "Search" again.
 
-* `b.e21.BHIST.f09_g17.CMIP6-historical.011.pop.h.SALT.195001-199912.nc`
-* `b.e21.BHIST.f09_g17.CMIP6-historical.011.pop.h.SALT.200001-201412.nc`
-* `b.e21.BHIST.f09_g17.CMIP6-historical.011.pop.h.TEMP.195001-199912.nc`
-* `b.e21.BHIST.f09_g17.CMIP6-historical.011.pop.h.TEMP.200001-201412.nc`
-* `b.e21.BSSP585cmip6.f09_g17.CMIP6-SSP5-8.5.002.pop.h.SALT.201501-206412.nc`
-* `b.e21.BSSP585cmip6.f09_g17.CMIP6-SSP5-8.5.002.pop.h.SALT.206501-210012.nc`
-* `b.e21.BSSP585cmip6.f09_g17.CMIP6-SSP5-8.5.002.pop.h.TEMP.201501-206412.nc`
-* `b.e21.BSSP585cmip6.f09_g17.CMIP6-SSP5-8.5.002.pop.h.TEMP.206501-210012.nc`
+Download the WGET Script for the "gn" (native grid) verison of  each Variable.
+
+Now, for the ssp data, go to CMIP6, select CESM as the
+Source ID; ssp585 as the Experiment IC; r2i1p1f1 as
+the Variant Label; and so and thetao in Variables.  Click "Search".  You many
+want to choose "Show All Replicas" and "Search" again.
+
+Again, download the WGET Script for the "gn" version of each Variable.  Run all
+of the WGET scripts. If all goes correctly, you should only need to log in once
+with your OpenID to run all the WGET Scripts.
 
 Finally, run `process_cesm2_e21_f09_g17.py -o /path/to/cesm2/files/` with the
-path where the CESM2 data sets are stored.
+path where the CESM2 data sets are stored (or similarly for the "historical"
+script).
 
