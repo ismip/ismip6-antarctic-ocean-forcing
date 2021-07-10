@@ -11,17 +11,17 @@ file, then I combine all of those files into a single long time series.
 Here would be the approximate procedure, based on the attached scripts and
 templates:
 
-1. Setup the conda environment you need:
+1. Clone the https://github.com/ismip/ismip6-antarctic-ocean-forcing repo
+   somewhere
+
+2. Setup the conda environment you need:
 ```bash
-conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
-    matplotlib netCDF4 xarray progressbar2 basemap descartes cartopy shapely \
-    nco gsw scikit-fmm pyshp dask imageio "pyremap<0.1.0"
+conda create -n ismip6_ocean_forcing -c conda-forge --file dev-spec.txt
+
+python -m pip install -e .
 
 conda activate ismip6_ocean_forcing
 ```
-
-2. Clone the https://github.com/ismip/ismip6-antarctic-ocean-forcing repo
-   somewhere
 
 3. In the directory where you plan to process the data, create a link to the
    `ismip6_ocean_forcing` subdirectory (not the repo, but one directory inside)
@@ -95,5 +95,5 @@ z_bnds = lev_bnds
 Obviously, you will probably need to make tweaks to these files along the way.
 You may also find that you run into bugs in my python code, in which case I
 would very much like you to submit and issue:
-https://github.com/xylar/ismip6-ocean-forcing/issues
+https://github.com/ismip/ismip6-antarctic-ocean-forcing/issues
 or a pull request with a bug fix.
