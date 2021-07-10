@@ -488,7 +488,6 @@ def _extrap_basin_level(field3D, matrixFileTemplate, basinMask,
 
     nt, nz, ny, nx = field3D.shape
 
-
     outField = field3D[:, zIndex, :, :]
 
     basinFillMask = numpy.logical_and(fillMask, basinMask)

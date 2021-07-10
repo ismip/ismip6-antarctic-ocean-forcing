@@ -42,8 +42,8 @@ def compute_yearly_mean(inFileNames):
     ds.time.attrs['standard_name'] = "time"
 
     timeBounds = numpy.zeros((ds.sizes['time'], 2))
-    timeBounds[:, 0] = 365.0*ds.time.values
-    timeBounds[:, 1] = 365.0*(ds.time.values+1)
+    timeBounds[:, 0] = ds.time.values
+    timeBounds[:, 1] = ds.time.values + 365.0
     ds['time_bnds'] = (('time', 'bnds'), timeBounds)
 
     return ds
@@ -73,7 +73,37 @@ for field in ['so', 'thetao']:
             args.out_dir, field, date)
         fileNames[field].append(inFileName)
 
-dates = ['200512-201511']
+dates = ['200512-201511',
+         '201512-202511',
+         '202512-203511',
+         '203512-204511',
+         '204512-205511',
+         '205512-206511',
+         '206512-207511',
+         '207512-208511',
+         '208512-209511',
+         '209512-209912',
+         '209912-210911',
+         '210912-211911',
+         '211912-212911',
+         '212912-213911',
+         '213912-214911',
+         '214912-215911',
+         '215912-216911',
+         '216912-217911',
+         '217912-218911',
+         '218912-219911',
+         '219912-220911',
+         '220912-221911',
+         '221912-222911',
+         '222912-223911',
+         '223912-224911',
+         '224912-225911',
+         '225912-226911',
+         '226912-227911',
+         '227912-228911',
+         '228912-229911',
+         '229912-229912']
 
 for field in ['so', 'thetao']:
     for date in dates:
@@ -84,13 +114,13 @@ for field in ['so', 'thetao']:
 
 for field in ['so', 'thetao']:
     outFileName = \
-        '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_186001-201412.nc'.format(
+        '{}/{}_annual_HadGEM2-ES_rcp85_r1i1p1_186001-229912.nc'.format(
             args.out_dir, field)
     if os.path.exists(outFileName):
         continue
 
     ds = compute_yearly_mean(fileNames[field])
 
-    # we don't want 1859 or 2015
-    ds = ds.isel(time=slice(1, ds.sizes['time']-1))
+    # we don't want 1859, because it is incomplete
+    ds = ds.isel(time=slice(1, ds.sizes['time']))
     ds.to_netcdf(outFileName)
