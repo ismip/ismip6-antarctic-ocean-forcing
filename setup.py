@@ -2,6 +2,22 @@
 
 from setuptools import setup, find_packages
 
+install_requires = ['dask',
+                    'descartes',
+                    'gsw',
+                    'imageio',
+                    'matplotlib',
+                    'netcdf4',
+                    'numpy',
+                    'requests',
+                    'progressbar2',
+                    'pyremap<0.1.0',
+                    'pyshp',
+                    'scikit-fmm',
+                    'scipy',
+                    'shapely',
+                    'xarray']
+
 version = '1.0'
 
 setup(name='ismip6_ocean_forcing',
@@ -24,8 +40,6 @@ setup(name='ismip6_ocean_forcing',
       ],
       packages=find_packages(),
       package_data={'ismip6_ocean_forcing': ['config.default']},
-      install_requires=['numpy', 'scipy', 'matplotlib', 'netCDF4', 'xarray',
-                        'progressbar2', 'basemap', 'descartes', 'cartopy',
-                        'shapely', 'gsw', 'scikit-fmm', ' pyshp', 'imageio'],
+      install_requires=install_requires,
       entry_points={'console_scripts':
                     ['ismip6_ocean_forcing = ismip6_ocean_forcing.__main__:main']})

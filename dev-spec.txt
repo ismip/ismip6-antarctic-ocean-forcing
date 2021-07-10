@@ -1,0 +1,17 @@
+python>=3.9
+dask
+descartes
+gsw
+imageio
+matplotlib
+nco
+netcdf4
+numpy
+requests
+progressbar2
+pyremap<0.1.0
+pyshp
+scikit-fmm
+scipy
+shapely
+xarray

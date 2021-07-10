@@ -12,36 +12,39 @@ build:
     script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv"
     noarch: python
 
+requirements:
+    host:
+        - python >=3.6
+        - pip
+    run:
+        - python >=3.6
+        - dask
+        - descartes
+        - gsw
+        - imageio
+        - matplotlib
+        - nco
+        - netcdf4
+        - numpy
+        - progressbar2
+        - pyremap<0.1.0
+        - pyshp
+        - requests
+        - scikit-fmm
+        - scipy
+        - shapely
+        - xarray
+
 test:
+    requires:
+        - pip
     imports:
         - ismip6_ocean_forcing
     commands:
         - ismip6_ocean_forcing --version
+        - pip check
 
-requirements:
-    build:
-        - python
-        - setuptools
-    run:
-        - python
-        - cython
-        - setuptools
-        - numpy
-        - scipy
-        - matplotlib
-        - netcdf4
-        - xarray
-        - progressbar2
-        - basemap
-        - descartes
-        - cartopy
-        - shapely
-        - nco
-        - gsw
-        - scikit-fmm
-        - pyshp
-        - dask
-        - imageio
+
 about:
     home:  http://gitub.com/xylar/ismip6-ocean-forcing
     license: MIT

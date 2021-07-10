@@ -1,16 +1,18 @@
-# ismip6-ocean-forcing
+# ismip6-antarctic-ocean-forcing
 
-Scripts for generating ocean forcing (primarily Antarctic) for the ISMIP6 activity
+Scripts for generating Antarctic ocean forcing for the ISMIP6 activity
 
 ## Required conda environment
 
-To generate the ocean forcing data, a conda environment can be set up with
-the required packages as follows:
+To generate the ocean forcing data, this repository can be cloned and a conda
+environment can be set up with the required packages as follows:
 
 ```bash
-conda create -n ismip6_ocean_forcing -c conda-forge python=3.6 numpy scipy \
-    matplotlib netCDF4 xarray progressbar2 basemap descartes cartopy shapely \
-    nco gsw scikit-fmm pyshp dask imageio "pyremap<0.1.0"
+git clone git@github.com:ismip/ismip6-antarctic-ocean-forcing.git
+cd ismip6-antarctic-ocean-forcing
+conda create -n ismip6_ocean_forcing -c conda-forge --file dev-spec.txt
+conda activate ismip6_ocean_forcing
+python -m pip install -e .
 ```
 
 If you need help installing `conda`,
