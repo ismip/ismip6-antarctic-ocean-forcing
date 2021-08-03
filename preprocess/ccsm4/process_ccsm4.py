@@ -96,8 +96,19 @@ dates = ['200601-200912',
          '206001-206912',
          '207001-207912',
          '208001-208912',
-         '209001-210012',
-         '210101-210912',
+         '209001-210012']
+
+for date in dates:
+    for field in ['so', 'thetao']:
+        inFileName = '{}/{}_Omon_CCSM4_rcp85_r1i1p1_{}.nc'.format(
+            args.out_dir, field, date)
+
+        outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_{}.nc'.format(
+            args.out_dir, field, date)
+
+        compute_yearly_mean(inFileName, outFileName, correctSalinity=False)
+
+dates = ['210101-210912',
          '211001-211912',
          '212001-212912',
          '213001-213912',
@@ -127,7 +138,7 @@ for date in dates:
         outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_{}.nc'.format(
             args.out_dir, field, date)
 
-        compute_yearly_mean(inFileName, outFileName, correctSalinity=False)
+        compute_yearly_mean(inFileName, outFileName, correctSalinity=True)
 
 for field in ['so', 'thetao']:
     outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_185001-230012.nc'.format(
