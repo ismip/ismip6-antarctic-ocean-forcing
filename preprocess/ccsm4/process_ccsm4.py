@@ -32,7 +32,8 @@ def compute_yearly_mean(inFileName, outFileName, correctSalinity):
         warnings.simplefilter("ignore", category=RuntimeWarning)
         ds = ds.groupby('time.year').mean('time', keep_attrs=True)
 
-    ds = ds.drop('time_bnds')
+    if 'time_bnds' in ds:
+        ds = ds.drop('time_bnds')
 
     # convert back to CF-compliant time
     ds = ds.rename({'year': 'time'})
@@ -45,8 +46,8 @@ def compute_yearly_mean(inFileName, outFileName, correctSalinity):
     ds.time.attrs['standard_name'] = "time"
 
     timeBounds = numpy.zeros((ds.sizes['time'], ds.sizes['bnds']))
-    timeBounds[:, 0] = 365.0*ds.time.values
-    timeBounds[:, 1] = 365.0*(ds.time.values+1)
+    timeBounds[:, 0] = ds.time.values
+    timeBounds[:, 1] = ds.time.values + 365.0
     ds['time_bnds'] = (('time', 'bnds'), timeBounds)
 
     if field == 'so' and correctSalinity:
@@ -107,13 +108,45 @@ for date in dates:
 
         compute_yearly_mean(inFileName, outFileName, correctSalinity=False)
 
+dates = ['210101-210912',
+         '211001-211912',
+         '212001-212912',
+         '213001-213912',
+         '214001-214912',
+         '215001-215912',
+         '216001-216912',
+         '217001-217912',
+         '218001-218912',
+         '219001-219912',
+         '220001-220912',
+         '221001-221912',
+         '222001-222912',
+         '223001-223912',
+         '224001-224912',
+         '225001-225912',
+         '226001-226912',
+         '227001-227912',
+         '228001-228912',
+         '229001-229912',
+         '230001-230012']
+
+for date in dates:
+    for field in ['so', 'thetao']:
+        inFileName = '{}/{}_Omon_CCSM4_rcp85_r1i1p1_{}.nc'.format(
+            args.out_dir, field, date)
+
+        outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_{}.nc'.format(
+            args.out_dir, field, date)
+
+        compute_yearly_mean(inFileName, outFileName, correctSalinity=True)
+
 for field in ['so', 'thetao']:
-    outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc'.format(
+    outFileName = '{}/{}_annual_CCSM4_rcp85_r1i1p1_185001-230012.nc'.format(
         args.out_dir, field)
     if not os.path.exists(outFileName):
         print(outFileName)
 
         # combine it all into a single data set
         ds = xarray.open_mfdataset('{}/{}_annual_CCSM4_*_r1i1p1_*.nc'.format(
-            args.out_dir, field), concat_dim='time')
+            args.out_dir, field), concat_dim='time', decode_times=False)
         ds.to_netcdf(outFileName)

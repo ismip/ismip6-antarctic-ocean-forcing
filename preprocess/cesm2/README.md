@@ -19,7 +19,7 @@ Again, download the WGET Script for the "gn" version of each Variable.  Run all
 of the WGET scripts. If all goes correctly, you should only need to log in once
 with your OpenID to run all the WGET Scripts.
 
-Finally, run `process_cesm2_e21_f09_g17.py -o /path/to/cesm2/files/` with the
+Finally, run `process_cesm2_ssp585.py -o /path/to/cesm2/files/` with the
 path where the CESM2 data sets are stored (or similarly for the "historical"
 script).
 
