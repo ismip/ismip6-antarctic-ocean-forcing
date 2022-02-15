@@ -84,7 +84,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     dx = config.getfloat('grid', 'dx')
     parallelTasks = config.getint('parallel', 'tasks')
 
-    maskedFileName = '{}/masked.nc'.format(progressDir)
+    maskedFileName = os.path.join(progressDir, 'masked.nc')
     if not os.path.exists(maskedFileName):
         ds = xarray.open_dataset(inFileName)
         # mask out bed and areas under ice shelves or in grounded ice regions
@@ -92,7 +92,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         ds.to_netcdf(maskedFileName)
 
     # write matrices for each basin and vertical level
-    progressFileName = '{}/open_ocean.nc'.format(progressDir)
+    progressFileName = os.path.join(progressDir, 'open_ocean.nc')
     if not os.path.exists(progressFileName):
         ds = xarray.open_dataset(maskedFileName)
 
@@ -102,7 +102,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         basinMask = openOceanMask
         basinName = 'open ocean'
 
-        matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
+        matrixFileTemplate = f'{matrixDir}/matrix_open_ocean_{{}}.npz'
         _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
                               validMask, invalidMask, basinMask, dx,
                               matrixFileTemplate, parallelTasks,
@@ -110,7 +110,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
     basinCount = numpy.amax(basinNumbers) + 1
 
-    basinMaskFileName = '{}/basin_masks.nc'.format(matrixDir)
+    basinMaskFileName = f'{matrixDir}/basin_masks.nc'
     if os.path.exists(basinMaskFileName):
         dsBasinMasks = xarray.open_dataset(basinMaskFileName)
     else:
@@ -119,23 +119,23 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
             basinMask = _compute_valid_basin_mask(
                 basinNumbers, basinNumber, openOceanMask,
                 continentalShelfMask, dx)
-            dsBasinMasks['basin{}Mask'.format(basinNumber)] = \
+            dsBasinMasks[f'basin{basinNumber}Mask'] = \
                 (('y', 'x'), basinMask)
         dsBasinMasks.to_netcdf(basinMaskFileName)
 
     for basinNumber in range(basinCount):
 
-        progressFileName = '{}/basin{}.nc'.format(progressDir, basinNumber)
+        progressFileName = f'{progressDir}/basin{basinNumber}.nc'
         if not os.path.exists(progressFileName):
             ds = xarray.open_dataset(maskedFileName)
 
-            basinMask = dsBasinMasks['basin{}Mask'.format(basinNumber)].values
+            basinMask = dsBasinMasks[f'basin{basinNumber}Mask'].values
             validMask = basinMask.copy()
             invalidMask = basinMask.copy()
-            basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
+            basinName = f'basin {basinNumber+1}/{basinCount}'
 
-            matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
-                    matrixDir, basinNumber)
+            matrixFileTemplate = \
+                f'{matrixDir}/matrix_basin{basinNumber}_{{}}.npz'
             _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
                                   validMask, invalidMask, basinMask, dx,
                                   matrixFileTemplate, parallelTasks,
@@ -149,16 +149,16 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         basinMask = numpy.logical_and(basinNumbers == basinNumber,
                                       numpy.logical_not(openOceanMask))
 
-        progressFileName = '{}/basin{}.nc'.format(progressDir, basinNumber)
+        progressFileName = f'{progressDir}/basin{basinNumber}.nc'
         if os.path.exists(progressFileName):
             ds = xarray.open_dataset(progressFileName)
         else:
             ds = xarray.open_dataset(maskedFileName)
 
-            basinName = 'basin {}/{}'.format(basinNumber+1, basinCount)
+            basinName = f'basin {basinNumber+1}/{basinCount}'
 
-            matrixFileTemplate = '{}/matrix_basin{}_{{}}.npz'.format(
-                    matrixDir, basinNumber)
+            matrixFileTemplate = \
+                f'{matrixDir}/matrix_basin{basinNumber}_{{}}.npz'
 
             _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
                           parallelTasks, basinMask, smoothingIterations,
@@ -168,7 +168,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
 
         _add_basin_field(ds, dsOut, fieldName, basinMask)
 
-    progressFileName = '{}/open_ocean.nc'.format(progressDir)
+    progressFileName = os.path.join(progressDir, 'open_ocean.nc')
     if os.path.exists(progressFileName):
         ds = xarray.open_dataset(progressFileName)
     else:
@@ -177,7 +177,7 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         # first, extrapolate the open ocean
         basinName = 'open ocean'
 
-        matrixFileTemplate = '{}/matrix_open_ocean_{{}}.npz'.format(matrixDir)
+        matrixFileTemplate = f'{matrixDir}/matrix_open_ocean_{{}}.npz'
         _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
                       parallelTasks, openOceanMask, smoothingIterations,
                       smoothingKernelRadius,  dx,
@@ -226,8 +226,8 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
 
     basinName = 'grounded above sea level'
 
-    matrixFileTemplate = '{}/matrix_grounded_above_sea_level_{{}}.npz'.format(
-            matrixDir)
+    matrixFileTemplate = \
+        f'{matrixDir}/matrix_grounded_above_sea_level_{{}}.npz'
     _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
                           invalidMask, basinMask, dx, matrixFileTemplate,
                           parallelTasks)
@@ -322,7 +322,7 @@ def _write_basin_matrices(ds, fieldName, basinName, openOceanMask, validMask,
 
     extrapKernelSize, extrapKernel = get_extrap_kernel()
 
-    print('  Writing matrices for {} in {}...'.format(fieldName, basinName))
+    print(f'  Writing matrices for {fieldName} in {basinName}...')
 
     widgets = ['  ', progressbar.Percentage(), ' ',
                progressbar.Bar(), ' ', progressbar.ETA()]
@@ -446,7 +446,7 @@ def _extrap_basin(ds, fieldName, basinName, matrixFileTemplate, parallelTasks,
         field3D = field3D.reshape((1, origShape[0], origShape[1],
                                    origShape[2]))
 
-    print('  Extrapolating {} in {}...'.format(fieldName, basinName))
+    print(f'  Extrapolating {fieldName} in {basinName}...')
     widgets = ['  ', progressbar.Percentage(), ' ',
                progressbar.Bar(), ' ', progressbar.ETA()]
     bar = progressbar.ProgressBar(widgets=widgets,
