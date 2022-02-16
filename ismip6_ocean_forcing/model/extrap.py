@@ -48,6 +48,12 @@ def _extrap_model(config, modelFolder):
     hres = get_horiz_res(config)
     modelName = config.get('model', 'name')
 
+    fields = config.get('model', 'fields')
+    fields = fields.replace(',', ' ').split()
+
+    basin = config.get('model', 'basin')
+    combineBasins = config.getboolean('model', 'combineBasins')
+
     inFileName = f'{modelFolder}/remap/{modelName}_temperature_{resExtrap}.nc'
     bedMaskFileName = f'{modelFolder}/bed_mask_{resExtrap}.nc'
     bedFileName = f'bedmap2/bedmap2_{hres}.nc'
@@ -57,10 +63,10 @@ def _extrap_model(config, modelFolder):
 
     matrixDir = os.path.join(modelName.lower(), 'matrices')
     progressDirs = dict()
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
         progressDirs[fieldName] = f'{modelFolder}/progress_{fieldName}'
 
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
         progressDir = progressDirs[fieldName]
         inFileName = f'{modelFolder}/remap/' \
                      f'{modelName}_{fieldName}_{resExtrap}.nc'
@@ -69,9 +75,12 @@ def _extrap_model(config, modelFolder):
 
         extrap_horiz(config, inFileName, outFileName, fieldName, bedFileName,
                      basinNumberFileName, bedMaskFileName, progressDir,
-                     matrixDir)
+                     matrixDir, basin=basin, combine=combineBasins)
 
-    for fieldName in ['temperature', 'salinity']:
+    if not combineBasins:
+        return
+
+    for fieldName in fields:
         progressDir = progressDirs[fieldName]
         inFileName = f'{progressDir}/' \
                      f'{modelName}_{fieldName}_{resExtrap}_extrap_horiz.nc'
@@ -83,7 +92,7 @@ def _extrap_model(config, modelFolder):
 
     inFileNames = {}
     outFileNames = {}
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
         progressDir = progressDirs[fieldName]
 
         inFileNames[fieldName] = \
@@ -96,7 +105,7 @@ def _extrap_model(config, modelFolder):
 
     remap_vertical(config, inFileNames, outFileNames, extrap=False)
 
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
         progressDir = progressDirs[fieldName]
         inFileName = f'{progressDir}/' \
                      f'{modelName}_{fieldName}_{resFinal}_extrap_vert.nc'

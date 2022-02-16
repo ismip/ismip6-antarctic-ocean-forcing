@@ -42,7 +42,44 @@ def make_3D_bed_mask(inFileName, outFileName, bedFileName):
 
 def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                  basinNumberFileName, bedMaskFileName, progressDir,
-                 matrixDir):
+                 matrixDir, basin='all', combine=True):
+
+    extrap_horiz_setup(inFileName, fieldName, bedmap2FileName,
+                       bedMaskFileName, progressDir, matrixDir)
+
+    with xarray.open_dataset(basinNumberFileName) as dsBasin:
+        basinNumbers = dsBasin.basinNumber.values
+    basinCount = numpy.amax(basinNumbers) + 1
+
+    if basin == 'all':
+        basins = list(range(basinCount))
+        extrapOpenOcean = True
+    elif basin == 'none':
+        basins = list()
+        extrapOpenOcean = False
+    elif basin == 'open_ocean':
+        basins = list()
+        extrapOpenOcean = True
+    else:
+        basins = [int(basin)-1]
+        extrapOpenOcean = False
+
+    for basinNumber in basins:
+        extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
+                           basinNumberFileName, bedMaskFileName, progressDir,
+                           matrixDir)
+
+    if extrapOpenOcean:
+        extrap_horiz_open_ocean(config, fieldName, bedMaskFileName,
+                                progressDir, matrixDir)
+
+    if combine:
+        combine_basins(outFileName, fieldName, bedmap2FileName,
+                       basinNumberFileName, progressDir)
+
+
+def extrap_horiz_setup(inFileName, fieldName, bedmap2FileName,
+                       bedMaskFileName, progressDir, matrixDir):
 
     try:
         os.makedirs(progressDir)
@@ -53,10 +90,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         os.makedirs(matrixDir)
     except OSError:
         pass
-
-    with xarray.open_dataset(basinNumberFileName) as dsBasin:
-        basinNumbers = dsBasin.basinNumber.values
-    basinCount = numpy.amax(basinNumbers) + 1
 
     openOceanMaskedFileName = os.path.join(progressDir, 'open_ocean_mask.nc')
     if not os.path.exists(openOceanMaskedFileName):
@@ -70,17 +103,6 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
         # mask out bed and areas under ice shelves or in grounded ice regions
         mask_ice_and_bed(inFileName, maskedFileName, fieldName, openOceanMask,
                          bedMaskFileName)
-
-    for basinNumber in range(basinCount):
-        extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
-                           basinNumberFileName, bedMaskFileName, progressDir,
-                           matrixDir)
-
-    extrap_horiz_open_ocean(config, fieldName, bedMaskFileName, progressDir,
-                            matrixDir)
-
-    combine_basins(outFileName, fieldName, bedmap2FileName,
-                   basinNumberFileName, progressDir)
 
 
 def extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
@@ -98,16 +120,6 @@ def extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
 
     with xarray.open_dataset(basinNumberFileName) as dsBasin:
         basinNumbers = dsBasin.basinNumber.values
-
-    try:
-        os.makedirs(progressDir)
-    except OSError:
-        pass
-
-    try:
-        os.makedirs(matrixDir)
-    except OSError:
-        pass
 
     smoothingIterations = config.getint('extrapolation', 'smoothingIterations')
     smoothingKernelRadius = config.getfloat('extrapolation',
