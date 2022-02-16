@@ -44,25 +44,57 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                  basinNumberFileName, bedMaskFileName, progressDir,
                  matrixDir):
 
-    if os.path.exists(outFileName):
+    try:
+        os.makedirs(progressDir)
+    except OSError:
+        pass
+
+    try:
+        os.makedirs(matrixDir)
+    except OSError:
+        pass
+
+    with xarray.open_dataset(basinNumberFileName) as dsBasin:
+        basinNumbers = dsBasin.basinNumber.values
+    basinCount = numpy.amax(basinNumbers) + 1
+
+    openOceanMaskedFileName = os.path.join(progressDir, 'open_ocean_mask.nc')
+    if not os.path.exists(openOceanMaskedFileName):
+        mask_open_ocean(bedmap2FileName, openOceanMaskedFileName)
+
+    with xarray.open_dataset(openOceanMaskedFileName) as dsMask:
+        openOceanMask = dsMask.openOceanMask.values
+
+    maskedFileName = os.path.join(progressDir, 'masked.nc')
+    if not os.path.exists(maskedFileName):
+        # mask out bed and areas under ice shelves or in grounded ice regions
+        mask_ice_and_bed(inFileName, maskedFileName, fieldName, openOceanMask,
+                         bedMaskFileName)
+
+    for basinNumber in range(basinCount):
+        extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
+                           basinNumberFileName, bedMaskFileName, progressDir,
+                           matrixDir)
+
+    extrap_horiz_open_ocean(config, fieldName, bedMaskFileName, progressDir,
+                            matrixDir)
+
+    combine_basins(outFileName, fieldName, bedmap2FileName,
+                   basinNumberFileName, progressDir)
+
+
+def extrap_horiz_basin(basinNumber, basinCount, config, fieldName,
+                       basinNumberFileName, bedMaskFileName, progressDir,
+                       matrixDir):
+
+    progressFileName = f'{progressDir}/basin{basinNumber}.nc'
+    if os.path.exists(progressFileName):
         return
 
-    with xarray.open_dataset(bedmap2FileName) as dsBed:
-        openOceanMask = dsBed.open_ocean_mask.values >= 0.5
-        bed = dsBed.bed.values
-        mask = numpy.isfinite(bed)
-
-        # continental shelf mask is all places that have ocean depth less than
-        # 1500 m and are connected to the edges of the domain (open ocean)
-        continentalShelfMask = numpy.zeros(bed.shape)
-        continentalShelfMask[mask] = bed[mask] > -1500.
-        # flood fill to take out deep areas inside the continent
-        continentalShelfMask = binary_fill_holes(continentalShelfMask)
-
-        # if ice is over ocean deeper than 1500 m, put it in the open ocean
-        # instead
-        openOceanMask = numpy.logical_or(
-                openOceanMask, numpy.logical_not(continentalShelfMask))
+    openOceanMaskedFileName = os.path.join(progressDir, 'open_ocean_mask.nc')
+    with xarray.open_dataset(openOceanMaskedFileName) as dsMask:
+        openOceanMask = dsMask.openOceanMask.values
+        continentalShelfMask = dsMask.continentalShelfMask.values
 
     with xarray.open_dataset(basinNumberFileName) as dsBasin:
         basinNumbers = dsBasin.basinNumber.values
@@ -85,62 +117,116 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
     parallelTasks = config.getint('parallel', 'tasks')
 
     maskedFileName = os.path.join(progressDir, 'masked.nc')
-    if not os.path.exists(maskedFileName):
-        ds = xarray.open_dataset(inFileName)
-        # mask out bed and areas under ice shelves or in grounded ice regions
-        _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName)
-        ds.to_netcdf(maskedFileName)
 
-    # write matrices for each basin and vertical level
+    basinMaskFileName = f'{matrixDir}/basin_mask_{basinNumber}.nc'
+    if os.path.exists(basinMaskFileName):
+        dsBasinMask = xarray.open_dataset(basinMaskFileName)
+    else:
+        dsBasinMask = xarray.Dataset()
+        basinMask = _compute_valid_basin_mask(
+            basinNumbers, basinNumber, openOceanMask,
+            continentalShelfMask, dx)
+        dsBasinMask[f'basin{basinNumber}Mask'] = \
+            (('y', 'x'), basinMask)
+        dsBasinMask.to_netcdf(basinMaskFileName)
+
+    ds = xarray.open_dataset(maskedFileName)
+
+    basinMask = dsBasinMask[f'basin{basinNumber}Mask'].values
+    validMask = basinMask.copy()
+    invalidMask = basinMask.copy()
+    basinName = f'basin {basinNumber+1}/{basinCount}'
+
+    matrixFileTemplate = \
+        f'{matrixDir}/matrix_basin{basinNumber}_{{}}.npz'
+    _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
+                          validMask, invalidMask, basinMask, dx,
+                          matrixFileTemplate, parallelTasks,
+                          bedMaskFileName)
+
+    basinMask = numpy.logical_and(basinNumbers == basinNumber,
+                                  numpy.logical_not(openOceanMask))
+
+    ds = xarray.open_dataset(maskedFileName)
+
+    basinName = f'basin {basinNumber+1}/{basinCount}'
+
+    _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
+                  parallelTasks, basinMask, smoothingIterations,
+                  smoothingKernelRadius, dx,
+                  replaceValidWithSmoothed=True)
+    ds.to_netcdf(progressFileName)
+
+
+def extrap_horiz_open_ocean(config, fieldName, bedMaskFileName, progressDir,
+                            matrixDir):
+
     progressFileName = os.path.join(progressDir, 'open_ocean.nc')
-    if not os.path.exists(progressFileName):
-        ds = xarray.open_dataset(maskedFileName)
+    if os.path.exists(progressFileName):
+        return
 
-        # first, extrapolate the open ocean
-        validMask = openOceanMask
-        invalidMask = openOceanMask
-        basinMask = openOceanMask
-        basinName = 'open ocean'
+    openOceanMaskedFileName = os.path.join(progressDir, 'open_ocean_mask.nc')
+    with xarray.open_dataset(openOceanMaskedFileName) as dsMask:
+        openOceanMask = dsMask.openOceanMask.values
 
-        matrixFileTemplate = f'{matrixDir}/matrix_open_ocean_{{}}.npz'
-        _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
-                              validMask, invalidMask, basinMask, dx,
-                              matrixFileTemplate, parallelTasks,
-                              bedMaskFileName)
+    try:
+        os.makedirs(progressDir)
+    except OSError:
+        pass
+
+    try:
+        os.makedirs(matrixDir)
+    except OSError:
+        pass
+
+    smoothingIterations = config.getint('extrapolation', 'smoothingIterations')
+    smoothingKernelRadius = config.getfloat('extrapolation',
+                                            'smoothingKernelRadius')
+
+    dx = config.getfloat('grid', 'dx')
+    parallelTasks = config.getint('parallel', 'tasks')
+
+    maskedFileName = os.path.join(progressDir, 'masked.nc')
+
+    ds = xarray.open_dataset(maskedFileName)
+
+    # first, extrapolate the open ocean
+    validMask = openOceanMask
+    invalidMask = openOceanMask
+    basinMask = openOceanMask
+    basinName = 'open ocean'
+
+    matrixFileTemplate = f'{matrixDir}/matrix_open_ocean_{{}}.npz'
+    _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
+                          validMask, invalidMask, basinMask, dx,
+                          matrixFileTemplate, parallelTasks,
+                          bedMaskFileName)
+
+    ds = xarray.open_dataset(maskedFileName)
+
+    # first, extrapolate the open ocean
+    basinName = 'open ocean'
+
+    _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
+                  parallelTasks, openOceanMask, smoothingIterations,
+                  smoothingKernelRadius,  dx,
+                  replaceValidWithSmoothed=True)
+
+    ds.to_netcdf(progressFileName)
+
+
+def combine_basins(outFileName, fieldName, bedmap2FileName,
+                   basinNumberFileName, progressDir):
+
+    with xarray.open_dataset(bedmap2FileName) as dsBed:
+        openOceanMask = dsBed.open_ocean_mask.values >= 0.5
+
+    maskedFileName = os.path.join(progressDir, 'masked.nc')
+
+    with xarray.open_dataset(basinNumberFileName) as dsBasin:
+        basinNumbers = dsBasin.basinNumber.values
 
     basinCount = numpy.amax(basinNumbers) + 1
-
-    basinMaskFileName = f'{matrixDir}/basin_masks.nc'
-    if os.path.exists(basinMaskFileName):
-        dsBasinMasks = xarray.open_dataset(basinMaskFileName)
-    else:
-        dsBasinMasks = xarray.Dataset()
-        for basinNumber in range(basinCount):
-            basinMask = _compute_valid_basin_mask(
-                basinNumbers, basinNumber, openOceanMask,
-                continentalShelfMask, dx)
-            dsBasinMasks[f'basin{basinNumber}Mask'] = \
-                (('y', 'x'), basinMask)
-        dsBasinMasks.to_netcdf(basinMaskFileName)
-
-    for basinNumber in range(basinCount):
-
-        progressFileName = f'{progressDir}/basin{basinNumber}.nc'
-        if not os.path.exists(progressFileName):
-            ds = xarray.open_dataset(maskedFileName)
-
-            basinMask = dsBasinMasks[f'basin{basinNumber}Mask'].values
-            validMask = basinMask.copy()
-            invalidMask = basinMask.copy()
-            basinName = f'basin {basinNumber+1}/{basinCount}'
-
-            matrixFileTemplate = \
-                f'{matrixDir}/matrix_basin{basinNumber}_{{}}.npz'
-            _write_basin_matrices(ds, fieldName, basinName, openOceanMask,
-                                  validMask, invalidMask, basinMask, dx,
-                                  matrixFileTemplate, parallelTasks,
-                                  bedMaskFileName)
-
     # extrapolate each basin and vertical level
     dsOut = xarray.open_dataset(maskedFileName)
 
@@ -150,40 +236,12 @@ def extrap_horiz(config, inFileName, outFileName, fieldName, bedmap2FileName,
                                       numpy.logical_not(openOceanMask))
 
         progressFileName = f'{progressDir}/basin{basinNumber}.nc'
-        if os.path.exists(progressFileName):
-            ds = xarray.open_dataset(progressFileName)
-        else:
-            ds = xarray.open_dataset(maskedFileName)
-
-            basinName = f'basin {basinNumber+1}/{basinCount}'
-
-            matrixFileTemplate = \
-                f'{matrixDir}/matrix_basin{basinNumber}_{{}}.npz'
-
-            _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                          parallelTasks, basinMask, smoothingIterations,
-                          smoothingKernelRadius, dx,
-                          replaceValidWithSmoothed=True)
-            ds.to_netcdf(progressFileName)
+        ds = xarray.open_dataset(progressFileName)
 
         _add_basin_field(ds, dsOut, fieldName, basinMask)
 
     progressFileName = os.path.join(progressDir, 'open_ocean.nc')
-    if os.path.exists(progressFileName):
-        ds = xarray.open_dataset(progressFileName)
-    else:
-        ds = xarray.open_dataset(maskedFileName)
-
-        # first, extrapolate the open ocean
-        basinName = 'open ocean'
-
-        matrixFileTemplate = f'{matrixDir}/matrix_open_ocean_{{}}.npz'
-        _extrap_basin(ds, fieldName, basinName, matrixFileTemplate,
-                      parallelTasks, openOceanMask, smoothingIterations,
-                      smoothingKernelRadius,  dx,
-                      replaceValidWithSmoothed=True)
-
-        ds.to_netcdf(progressFileName)
+    ds = xarray.open_dataset(progressFileName)
 
     _add_basin_field(ds, dsOut, fieldName, openOceanMask)
 
@@ -239,7 +297,38 @@ def extrap_grounded_above_sea_level(config, inFileName, outFileName, fieldName,
     ds.to_netcdf(outFileName)
 
 
-def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
+def mask_open_ocean(bedmap2FileName, maskedFileName):
+
+    with xarray.open_dataset(bedmap2FileName) as dsBed:
+        openOceanMask = dsBed.open_ocean_mask.values >= 0.5
+        bed = dsBed.bed.values
+        mask = numpy.isfinite(bed)
+
+        # continental shelf mask is all places that have ocean depth less than
+        # 1500 m and are connected to the edges of the domain (open ocean)
+        continentalShelfMask = numpy.zeros(bed.shape)
+        continentalShelfMask[mask] = bed[mask] > -1500.
+        # flood fill to take out deep areas inside the continent
+        continentalShelfMask = binary_fill_holes(continentalShelfMask)
+
+        # if ice is over ocean deeper than 1500 m, put it in the open ocean
+        # instead
+        openOceanMask = numpy.logical_or(
+                openOceanMask, numpy.logical_not(continentalShelfMask))
+    ds = xarray.Dataset()
+
+    ds['openOceanMask'] = (('y', 'x'), openOceanMask)
+    ds['continentalShelfMask'] = (('y', 'x'), continentalShelfMask)
+
+    ds.to_netcdf(maskedFileName)
+
+
+def mask_ice_and_bed(inFileName, maskedFileName, fieldName, openOceanMask,
+                     bedMaskFileName):
+    if os.path.exists(maskedFileName):
+        return
+
+    ds = xarray.open_dataset(inFileName)
 
     openOceanMask = numpy.logical_and(openOceanMask, ds.lat.values < -60.)
 
@@ -263,6 +352,7 @@ def _mask_ice_and_bed(ds, fieldName, openOceanMask, bedMaskFileName):
     attrs = ds[fieldName].attrs
     ds[fieldName] = (dims, field3D)
     ds[fieldName].attrs = attrs
+    ds.to_netcdf(maskedFileName)
 
 
 def _compute_valid_basin_mask(basinNumbers, basin, openOceanMask,
