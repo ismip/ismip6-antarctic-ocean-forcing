@@ -39,7 +39,7 @@ setup(name='ismip6_ocean_forcing',
           'Topic :: Scientific/Engineering',
       ],
       packages=find_packages(),
-      package_data={'ismip6_ocean_forcing': ['config.default']},
+      package_data={'ismip6_ocean_forcing': ['default.cfg']},
       install_requires=install_requires,
       entry_points={'console_scripts':
                     ['ismip6_ocean_forcing = ismip6_ocean_forcing.__main__:main']})
