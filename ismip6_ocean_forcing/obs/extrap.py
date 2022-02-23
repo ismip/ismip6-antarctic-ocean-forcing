@@ -12,66 +12,71 @@ def extrap_obs(config, decades):
     resFinal = get_res(config, extrap=False)
     hres = get_horiz_res(config)
 
-    inFileName = 'obs/obs_temperature_{}_{}.nc'.format(decades, resExtrap)
-    bedMaskFileName = 'obs/bed_mask_{}.nc'.format(resExtrap)
-    bedFileName = 'bedmap2/bedmap2_{}.nc'.format(hres)
-    basinNumberFileName = 'imbie/basinNumbers_{}.nc'.format(hres)
+    inFileName = f'obs/obs_temperature_{decades}_{resExtrap}.nc'
+    bedMaskFileName = f'obs/bed_mask_{resExtrap}.nc'
+    bedFileName = f'bedmap2/bedmap2_{hres}.nc'
+    basinNumberFileName = f'imbie/basinNumbers_{hres}.nc'
 
     make_3D_bed_mask(inFileName, bedMaskFileName, bedFileName)
 
+    matrixDirs = dict()
+    progressDirs = dict()
     for fieldName in ['temperature', 'salinity']:
-        inFileName = 'obs/obs_{}_{}_{}.nc'.format(fieldName, decades,
-                                                  resExtrap)
-        outFileName = 'obs/obs_{}_{}_{}_extrap_horiz.nc'.format(
-                fieldName, decades, resExtrap)
+        progressDirs[fieldName] = f'obs/progress_{fieldName}'
+        matrixDirs[fieldName] = f'obs/matrices_{fieldName}'
 
-        progressDir = 'obs/progress_{}'.format(fieldName)
-        matrixDir = 'obs/matrices_{}'.format(fieldName)
+    for fieldName in ['temperature', 'salinity']:
+        progressDir = progressDirs[fieldName]
+        matrixDir = matrixDirs[fieldName]
+        inFileName = f'{progressDir}/obs_{fieldName}_{decades}_{resExtrap}.nc'
+        outFileName = f'{progressDir}/' \
+                      f'obs_{fieldName}_{decades}_{resExtrap}_extrap_horiz.nc'
+
         extrap_horiz(config, inFileName, outFileName, fieldName, bedFileName,
                      basinNumberFileName, bedMaskFileName, progressDir,
                      matrixDir)
 
     for fieldName in ['temperature', 'salinity']:
-        inFileName = 'obs/obs_{}_{}_{}_extrap_horiz.nc'.format(
-                fieldName, decades, resExtrap)
-
-        outFileName = 'obs/obs_{}_{}_{}_extrap_vert.nc'.format(
-                fieldName, decades, resExtrap)
+        progressDir = progressDirs[fieldName]
+        inFileName = f'{progressDir}/' \
+                     f'obs_{fieldName}_{decades}_{resExtrap}_extrap_horiz.nc'
+        outFileName = f'{progressDir}/' \
+                      f'obs_{fieldName}_{decades}_{resExtrap}_extrap_vert.nc'
 
         extrap_vert(config, inFileName, outFileName, fieldName)
 
     tempFileName = \
-        'obs/obs_temperature_{}_{}_extrap_vert.nc'.format(decades, resExtrap)
+        f'{progressDir}/obs_temperature_{decades}_{resExtrap}_extrap_vert.nc'
     salinFileName = \
-        'obs/obs_salinity_{}_{}_extrap_vert.nc'.format(decades, resExtrap)
+        f'{progressDir}/obs_salinity_{decades}_{resExtrap}_extrap_vert.nc'
     outFileName = \
-        'obs/obs_thermal_forcing_{}_{}_extrap_vert.nc'.format(decades,
-                                                              resExtrap)
+        f'{progressDir}/' \
+        f'obs_thermal_forcing_{decades}_{resExtrap}_extrap_vert.nc'
     compute_thermal_forcing(tempFileName, salinFileName, outFileName)
 
     inFileNames = {}
     outFileNames = {}
     for fieldName in ['temperature', 'salinity']:
+        progressDir = progressDirs[fieldName]
 
         inFileNames[fieldName] = \
-            'obs/obs_{}_{}_{}_extrap_vert.nc'.format(
-                fieldName, decades, resExtrap)
+            f'{progressDir}/' \
+            f'obs_{fieldName}_{decades}_{resExtrap}_extrap_vert.nc'
 
         outFileNames[fieldName] = \
-            'obs/obs_{}_{}_{}_extrap_vert.nc'.format(
-                fieldName, decades, resFinal)
+            f'{progressDir}/' \
+            f'obs_{fieldName}_{decades}_{resFinal}_extrap_vert.nc'
 
     remap_vertical(config, inFileNames, outFileNames, extrap=False)
 
     for fieldName in ['temperature', 'salinity']:
+        progressDir = progressDirs[fieldName]
+        matrixDir = matrixDirs[fieldName]
 
-        inFileName = 'obs/obs_{}_{}_{}_extrap_vert.nc'.format(
-                fieldName, decades, resFinal)
+        inFileName = f'{progressDir}/' \
+                     f'obs_{fieldName}_{decades}_{resFinal}_extrap_vert.nc'
 
-        outFileName = 'obs/obs_{}_{}_{}.nc'.format(fieldName, decades,
-                                                   resFinal)
+        outFileName = f'obs/obs_{fieldName}_{decades}_{resFinal}.nc'
 
-        progressDir = 'obs/progress_{}'.format(fieldName)
-        matrixDir = 'obs/matrices_{}'.format(fieldName)
         extrap_grounded_above_sea_level(config, inFileName, outFileName,
                                         fieldName, progressDir, matrixDir)

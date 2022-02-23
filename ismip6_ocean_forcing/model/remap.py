@@ -65,20 +65,20 @@ def _fix_units_and_periodicity(config, modelFolder):
             if name in ds:
                 newName = renameDict[name]
                 if newName in ds:
-                    ds = ds.drop(newName)
+                    ds = ds.drop_vars(newName)
                 ds = ds.rename({name: renameDict[name]})
 
         ds = ds.isel(time=slice(tIndexMin, tIndexMax))
 
         for coord in ds.coords:
             if coord not in keepList:
-                ds = ds.drop(coord)
+                ds = ds.drop_vars(coord)
 
         dropList = []
         for var in ds.data_vars:
             if var not in keepList:
                 dropList.append(var)
-        ds = ds.drop(dropList)
+        ds = ds.drop_vars(dropList)
 
         ds.z.attrs['bounds'] = 'z_bnds'
 
@@ -209,12 +209,13 @@ def _remap(config, modelFolder):
 
         remapper.build_mapping_file(method='bilinear')
 
-        ds = ds.drop(['lat', 'lon'])
+        ds = ds.drop_vars(['lat', 'lon'])
 
         nt = ds.sizes['time']
 
         widgets = ['  ', progressbar.Percentage(), ' ',
                    progressbar.Bar(), ' ', progressbar.ETA()]
+        print(f' remapping: {fieldName}')
         bar = progressbar.ProgressBar(widgets=widgets,
                                       maxval=nt).start()
 

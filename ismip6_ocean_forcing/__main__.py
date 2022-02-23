@@ -4,7 +4,7 @@ Script for creating ISMIP6 ocean forcing
 
 import os
 import argparse
-import pkg_resources
+from importlib.resources import path
 from configparser import ConfigParser, ExtendedInterpolation
 
 import ismip6_ocean_forcing
@@ -20,34 +20,44 @@ def main():
 
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('configFiles', metavar='CONFIG',
-                        type=str, nargs='*', help='config file')
+    parser.add_argument('config_files', metavar='CONFIG',
+                        type=str, nargs='*', help='config file(s)')
     parser.add_argument('-v', '--version',
                         action='version',
                         version='ismip6_ocean_forcing {}'.format(
                                 ismip6_ocean_forcing.__version__),
                         help="Show version number and exit")
+    parser.add_argument('--model_field', dest='model_field', type=str,
+                        help="A field (temperature or salinity) to "
+                             "extrapolate")
+    parser.add_argument('--model_basin', dest='model_basin', type=str,
+                        help="A basin (none, 1 to 16 or open_ocean) to "
+                             "extrapolate")
+    parser.add_argument('--model_combine_basins', dest='model_combine_basins',
+                        action='store_true',
+                        help="Whether to only combine basins that have "
+                             "already been extrapolated")
     args = parser.parse_args()
 
-    for configFile in args.configFiles:
-        if not os.path.exists(configFile):
-            raise OSError('Config file {} not found.'.format(configFile))
+    for config_file in args.config_files:
+        if not os.path.exists(config_file):
+            raise OSError('Config file {} not found.'.format(config_file))
 
-    # add config.default to cover default not included in the config files
-    # provided on the command line
-    if pkg_resources.resource_exists('ismip6_ocean_forcing', 'config.default'):
-        defaultConfig = pkg_resources.resource_filename('ismip6_ocean_forcing',
-                                                        'config.default')
-        configFiles = [defaultConfig] + args.configFiles
-    else:
-        print('WARNING: Did not find config.default.  Assuming other config '
-              'file(s) contain a\n'
-              'full set of configuration options.')
-        defaultConfig = None
-        configFiles = args.configFiles
+    config_files = list()
+    with path('ismip6_ocean_forcing', 'default.cfg') as default_config:
+        config_files.append(str(default_config))
+    config_files.extend(args.config_files)
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
-    config.read(configFiles)
+    config.read(config_files)
+    if args.model_field is not None:
+        config.set('model', 'field', args.model_field)
+    if args.model_basin is not None:
+        config.set('model', 'basin', args.model_basin)
+    if args.model_combine_basins:
+        config.set('model', 'combineBasins', 'True')
+    elif args.model_basin is not None and args.model_basin != 'all':
+        config.set('model', 'combineBasins', 'False')
 
     rignot_to_ismip6_grid(config)
     bedmap2_to_ismip6_grid(config)

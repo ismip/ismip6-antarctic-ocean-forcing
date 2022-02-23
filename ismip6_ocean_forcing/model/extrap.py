@@ -19,16 +19,22 @@ def extrapolate_model(config):
 
     modelName = config.get('model', 'name')
     subfolder = config.get('model', 'folder')
-    modelFolder = '{}/{}'.format(modelName.lower(), subfolder)
+    modelFolder = os.path.join(modelName.lower(), subfolder)
 
     try:
         os.makedirs(modelFolder)
     except OSError:
         pass
 
-    print('Extrapolate {} model results...'.format(modelName))
+    print(f'Extrapolate {modelName} model results...')
 
-    remap.remap_model(config, modelFolder)
+    remapFolder = os.path.join(modelFolder, 'remap')
+    try:
+        os.makedirs(remapFolder)
+    except OSError:
+        pass
+
+    remap.remap_model(config, remapFolder)
 
     _extrap_model(config, modelFolder)
 
@@ -42,56 +48,69 @@ def _extrap_model(config, modelFolder):
     hres = get_horiz_res(config)
     modelName = config.get('model', 'name')
 
-    inFileName = '{}/{}_temperature_{}.nc'.format(
-        modelFolder, modelName, resExtrap)
-    bedMaskFileName = '{}/bed_mask_{}.nc'.format(
-        modelFolder, resExtrap)
-    bedFileName = 'bedmap2/bedmap2_{}.nc'.format(hres)
-    basinNumberFileName = 'imbie/basinNumbers_{}.nc'.format(hres)
+    fields = config.get('model', 'fields')
+    fields = fields.replace(',', ' ').split()
+
+    basin = config.get('model', 'basin')
+    combineBasins = config.getboolean('model', 'combineBasins')
+
+    inFileName = f'{modelFolder}/remap/{modelName}_temperature_{resExtrap}.nc'
+    bedMaskFileName = f'{modelFolder}/bed_mask_{resExtrap}.nc'
+    bedFileName = f'bedmap2/bedmap2_{hres}.nc'
+    basinNumberFileName = f'imbie/basinNumbers_{hres}.nc'
 
     make_3D_bed_mask(inFileName, bedMaskFileName, bedFileName)
 
-    for fieldName in ['temperature', 'salinity']:
-        inFileName = '{}/{}_{}_{}.nc'.format(
-            modelFolder, modelName, fieldName, resExtrap)
-        outFileName = '{}/{}_{}_{}_extrap_horiz.nc'.format(
-            modelFolder, modelName, fieldName, resExtrap)
+    matrixDir = os.path.join(modelName.lower(), 'matrices')
+    progressDirs = dict()
+    for fieldName in fields:
+        progressDirs[fieldName] = f'{modelFolder}/progress_{fieldName}'
 
-        progressDir = '{}/progress_{}'.format(modelFolder, fieldName)
-        matrixDir = '{}/matrices'.format(modelName.lower())
+    for fieldName in fields:
+        progressDir = progressDirs[fieldName]
+        inFileName = f'{modelFolder}/remap/' \
+                     f'{modelName}_{fieldName}_{resExtrap}.nc'
+        outFileName = f'{progressDir}/' \
+                      f'{modelName}_{fieldName}_{resExtrap}_extrap_horiz.nc'
+
         extrap_horiz(config, inFileName, outFileName, fieldName, bedFileName,
                      basinNumberFileName, bedMaskFileName, progressDir,
-                     matrixDir)
+                     matrixDir, basin=basin, combine=combineBasins)
 
-    for fieldName in ['temperature', 'salinity']:
-        inFileName = '{}/{}_{}_{}_extrap_horiz.nc'.format(
-            modelFolder, modelName, fieldName, resExtrap)
+    if not combineBasins:
+        return
 
-        outFileName = '{}/{}_{}_{}_extrap_vert.nc'.format(
-            modelFolder, modelName, fieldName, resExtrap)
+    for fieldName in fields:
+        progressDir = progressDirs[fieldName]
+        inFileName = f'{progressDir}/' \
+                     f'{modelName}_{fieldName}_{resExtrap}_extrap_horiz.nc'
+
+        outFileName = f'{progressDir}/' \
+                      f'{modelName}_{fieldName}_{resExtrap}_extrap_vert.nc'
 
         extrap_vert(config, inFileName, outFileName, fieldName)
 
     inFileNames = {}
     outFileNames = {}
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
+        progressDir = progressDirs[fieldName]
 
-        inFileNames[fieldName] = '{}/{}_{}_{}_extrap_vert.nc'.format(
-            modelFolder, modelName, fieldName, resExtrap)
-        outFileNames[fieldName] = '{}/{}_{}_{}_extrap_vert.nc'.format(
-            modelFolder, modelName, fieldName, resFinal)
+        inFileNames[fieldName] = \
+            f'{progressDir}/' \
+            f'{modelName}_{fieldName}_{resExtrap}_extrap_vert.nc'
+
+        outFileNames[fieldName] = \
+            f'{progressDir}/' \
+            f'{modelName}_{fieldName}_{resFinal}_extrap_vert.nc'
 
     remap_vertical(config, inFileNames, outFileNames, extrap=False)
 
-    for fieldName in ['temperature', 'salinity']:
+    for fieldName in fields:
+        progressDir = progressDirs[fieldName]
+        inFileName = f'{progressDir}/' \
+                     f'{modelName}_{fieldName}_{resFinal}_extrap_vert.nc'
 
-        inFileName = '{}/{}_{}_{}_extrap_vert.nc'.format(
-            modelFolder, modelName, fieldName, resFinal)
+        outFileName = f'{modelFolder}/{modelName}_{fieldName}_{resFinal}.nc'
 
-        outFileName = '{}/{}_{}_{}.nc'.format(
-            modelFolder, modelName, fieldName, resFinal)
-
-        progressDir = '{}/progress_{}'.format(modelFolder, fieldName)
-        matrixDir = '{}/matrices'.format(modelName.lower())
         extrap_grounded_above_sea_level(config, inFileName, outFileName,
                                         fieldName, progressDir, matrixDir)
