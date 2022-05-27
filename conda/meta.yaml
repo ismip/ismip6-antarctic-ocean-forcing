@@ -1,7 +1,7 @@
-{% set version = "1.0" %}
+{% set version = "1.1" %}
 
 package:
-    name: ismip6_ocean_forcing
+    name: ismip6_antarctic_ocean_forcing
     version: {{ version }}
 
 source:
@@ -46,8 +46,9 @@ test:
 
 
 about:
-    home:  http://gitub.com/xylar/ismip6-ocean-forcing
+    home:  https://github.com/ismip/ismip6-antarctic-ocean-forcing
     license: MIT
+    license_family: MIT
     license_file: LICENSE
     summary: 'A python package for creating ISMIP6 ocean forcing data sets.'
 
