@@ -48,6 +48,7 @@ def _extrap_model(config, modelFolder):
     hres = get_horiz_res(config)
     modelName = config.get('model', 'name')
     topoPrefix = config.get('topo', 'topoPrefix')
+    shareMatrix = config.getboolean('extrapolation', 'shareMatrix')
 
     fields = config.get('model', 'fields')
     fields = fields.replace(',', ' ').split()
@@ -62,7 +63,11 @@ def _extrap_model(config, modelFolder):
 
     make_3D_bed_mask(inFileName, bedMaskFileName, bedFileName)
 
-    matrixDir = os.path.join(modelName.lower(), 'matrices')
+    if shareMatrix:
+        matrixDir = os.path.join(modelName.lower(), 'matrices')
+    else:
+        matrixDir = os.path.join(modelFolder, 'matrices')
+
     progressDirs = dict()
     for fieldName in fields:
         progressDirs[fieldName] = f'{modelFolder}/progress_{fieldName}'
