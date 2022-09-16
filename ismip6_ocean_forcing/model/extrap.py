@@ -47,6 +47,7 @@ def _extrap_model(config, modelFolder):
     resFinal = get_res(config, extrap=False)
     hres = get_horiz_res(config)
     modelName = config.get('model', 'name')
+    topoPrefix = config.get('topo', 'topoPrefix')
 
     fields = config.get('model', 'fields')
     fields = fields.replace(',', ' ').split()
@@ -56,7 +57,7 @@ def _extrap_model(config, modelFolder):
 
     inFileName = f'{modelFolder}/remap/{modelName}_temperature_{resExtrap}.nc'
     bedMaskFileName = f'{modelFolder}/bed_mask_{resExtrap}.nc'
-    bedFileName = f'bedmap2/bedmap2_{hres}.nc'
+    bedFileName = f'{topoPrefix}_{hres}.nc'
     basinNumberFileName = f'imbie/basinNumbers_{hres}.nc'
 
     make_3D_bed_mask(inFileName, bedMaskFileName, bedFileName)
