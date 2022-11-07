@@ -12,9 +12,9 @@ from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
 
 
 def process_meop(config):
-    '''
+    """
     Download MEOP temperature and salinity, and bin them on the ISMIP6 grid
-    '''
+    """
 
     try:
         os.makedirs('meop')
@@ -24,25 +24,27 @@ def process_meop(config):
     print('Processing Marine Mammals Exploring the Oceans Pole to Pole '
           '(MEOP)...')
 
-    if not os.path.exists('meop/MEOP-CTD_2018-04-10'):
+    dataSubdir = 'home/jupyter-froqu/MEOP_process/public/MEOP-CTD_2021-11-26'
+
+    if not os.path.exists(f'meop/{dataSubdir}'):
         baseURL = 'https://www.seanoe.org/data/00343/45461/data'
-        fileNames = ['58202.zip']
+        fileNames = ['89863.zip']
         download_files(fileNames, baseURL, 'meop')
 
         print('  Decompressing MEOP data...')
-        args = ['unzip', 'meop/58202.zip', '-d', 'meop/']
+        args = ['unzip', 'meop/89863.zip', '-d', 'meop/']
         returncode = subprocess.call(args)
         if returncode not in [0, 1, 2]:
             raise subprocess.CalledProcessError(returncode, args)
 
         print('     Done.')
 
-    _bin_meop(config, 'TEMP', 'temperature')
-    _bin_meop(config, 'PSAL', 'salinity')
+    _bin_meop(config, 'TEMP', 'temperature', dataSubdir)
+    _bin_meop(config, 'PSAL', 'salinity', dataSubdir)
     print('Done.')
 
 
-def _bin_meop(config, inVarName, outVarName):
+def _bin_meop(config, inVarName, outVarName, dataSubdir):
     res = get_res(config)
     outFileName = 'meop/meop_{}_{}.nc'.format(outVarName, res)
     if os.path.exists(outFileName):
@@ -84,7 +86,7 @@ def _bin_meop(config, inVarName, outVarName):
 
     proj = get_antarctic_stereographic_projection()
 
-    fileList = sorted(glob.glob('meop/MEOP-CTD_2018-04-10/*/DATA_ncARGO/*.nc'))
+    fileList = sorted(glob.glob(f'meop/{dataSubdir}/*/DATA/*.nc'))
     print('  Binning MEOP {} profiles...'.format(outVarName))
 
     widgets = ['  ', progressbar.Percentage(), ' ',
