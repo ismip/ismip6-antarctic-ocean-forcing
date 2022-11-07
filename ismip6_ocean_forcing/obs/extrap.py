@@ -11,10 +11,11 @@ def extrap_obs(config, decades):
     resExtrap = get_res(config, extrap=True)
     resFinal = get_res(config, extrap=False)
     hres = get_horiz_res(config)
+    topoPrefix = config.get('topo', 'topoPrefix')
 
     inFileName = f'obs/obs_temperature_{decades}_{resExtrap}.nc'
     bedMaskFileName = f'obs/bed_mask_{resExtrap}.nc'
-    bedFileName = f'bedmap2/bedmap2_{hres}.nc'
+    bedFileName = f'{topoPrefix}_{hres}.nc'
     basinNumberFileName = f'imbie/basinNumbers_{hres}.nc'
 
     make_3D_bed_mask(inFileName, bedMaskFileName, bedFileName)

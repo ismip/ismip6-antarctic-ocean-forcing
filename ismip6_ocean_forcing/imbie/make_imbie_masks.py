@@ -41,7 +41,8 @@ def make_imbie_masks(config):
               'J-K': ['J-Jpp', 'Jpp-K'],
               'K-A': ['K-A']}
 
-    bedFileName = 'bedmap2/bedmap2_{}.nc'.format(res)
+    topoPrefix = config.get('topo', 'topoPrefix')
+    bedFileName = f'{topoPrefix}_{res}.nc'
 
     _download_imbie()
 
