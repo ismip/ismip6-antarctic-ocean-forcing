@@ -6,6 +6,7 @@ import gsw
 import progressbar
 import subprocess
 from pyremap.polar import get_antarctic_stereographic_projection
+import zipfile
 
 from ismip6_ocean_forcing.io import download_files
 from ismip6_ocean_forcing.remap.res import get_res, get_horiz_res
@@ -31,12 +32,9 @@ def process_meop(config):
         fileNames = ['89863.zip']
         download_files(fileNames, baseURL, 'meop')
 
-        print('  Decompressing MEOP data...')
-        args = ['unzip', 'meop/89863.zip', '-d', 'meop/']
-        returncode = subprocess.call(args)
-        if returncode not in [0, 1, 2]:
-            raise subprocess.CalledProcessError(returncode, args)
-
+        print('  Unzipping MEOP data...')
+        with zipfile.ZipFile('meop/89863.zip', 'r') as zip_ref:
+            zip_ref.extractall('meop/')
         print('     Done.')
 
     _bin_meop(config, 'TEMP', 'temperature', dataSubdir)
