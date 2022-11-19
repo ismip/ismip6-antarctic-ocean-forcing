@@ -13,7 +13,8 @@ def extrap_obs(config, decades):
     hres = get_horiz_res(config)
     topoPrefix = config.get('topo', 'topoPrefix')
 
-    inFileName = f'obs/obs_temperature_{decades}_{resExtrap}.nc'
+    inFileName = f'obs/progress_temperature/obs_temperature_' \
+                 f'{decades}_{resExtrap}.nc'
     bedMaskFileName = f'obs/bed_mask_{resExtrap}.nc'
     bedFileName = f'{topoPrefix}_{hres}.nc'
     basinNumberFileName = f'imbie/basinNumbers_{hres}.nc'
@@ -45,15 +46,6 @@ def extrap_obs(config, decades):
                       f'obs_{fieldName}_{decades}_{resExtrap}_extrap_vert.nc'
 
         extrap_vert(config, inFileName, outFileName, fieldName)
-
-    tempFileName = \
-        f'{progressDir}/obs_temperature_{decades}_{resExtrap}_extrap_vert.nc'
-    salinFileName = \
-        f'{progressDir}/obs_salinity_{decades}_{resExtrap}_extrap_vert.nc'
-    outFileName = \
-        f'{progressDir}/' \
-        f'obs_thermal_forcing_{decades}_{resExtrap}_extrap_vert.nc'
-    compute_thermal_forcing(tempFileName, salinFileName, outFileName)
 
     inFileNames = {}
     outFileNames = {}

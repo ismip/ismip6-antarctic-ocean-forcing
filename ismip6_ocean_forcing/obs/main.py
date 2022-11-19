@@ -55,7 +55,14 @@ def _combine_obs(config, decades):
     print('  Combining observations...')
     res = get_res(config, extrap=True)
     for fieldName in ['temperature', 'salinity']:
-        outFileName = 'obs/obs_{}_{}_{}.nc'.format(fieldName, decades, res)
+        progressDir = 'obs/progress_{}'.format(fieldName)
+        try:
+            os.makedirs(progressDir)
+        except FileExistsError:
+            pass
+
+        outFileName = '{}/obs_{}_{}_{}.nc'.format(progressDir,
+                fieldName, decades, res)
         if os.path.exists(outFileName):
             continue
         datasets = {}
