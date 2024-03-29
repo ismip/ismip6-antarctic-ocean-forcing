@@ -67,7 +67,7 @@ def _combine_features(featuresToCombine, newName):
         featureShapes.append(shapely.geometry.shape(feature['geometry']))
         featureNames.append(feature['properties']['name'])
 
-    combinedShape = shapely.ops.cascaded_union(featureShapes)
+    combinedShape = shapely.ops.unary_union(featureShapes)
 
     feature = {}
     feature['properties'] = {}
@@ -95,10 +95,12 @@ def _write_basin_image(res, basinShape, name, nx, ny, dx):
     color = 'black'
 
     if basinShape.geom_type == 'Polygon':
-        ax.add_patch(PolygonPatch(basinShape, fc=color, ec=color, linewidth=0))
+        ax.add_patch(PolygonPatch(
+            basinShape.__geo_interface__, fc=color, ec=color, linewidth=0))
     elif basinShape.geom_type == 'MultiPolygon':
         for poly in basinShape:
-            ax.add_patch(PolygonPatch(poly, fc=color, ec=color, linewidth=0))
+            ax.add_patch(PolygonPatch(
+                poly.__geo_interface__, fc=color, ec=color, linewidth=0))
 
     plt.xlim([-dx*0.5*(nx+1), dx*0.5*(nx+1)])
     plt.ylim([-dx*0.5*(ny+1), dx*0.5*(ny+1)])

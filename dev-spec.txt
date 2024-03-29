@@ -1,6 +1,6 @@
-python>=3.9
+python >=3.9
 dask
-descartes
+descartes >=1.1.0
 gsw
 imageio
 matplotlib
@@ -9,9 +9,9 @@ netcdf4
 numpy
 requests
 progressbar2
-pyremap<0.1.0
+pyremap >=1.3.0
 pyshp
 scikit-fmm
 scipy
-shapely
+shapely >=2.0
 xarray

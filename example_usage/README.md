@@ -18,13 +18,13 @@ this directory:
 ```bash
 conda create -n ismip6_ocean_forcing -c conda-forge --file dev-spec.txt
 
-python -m pip install -e .
-
 conda activate ismip6_ocean_forcing
+
+python -m pip install --no-deps -e .
 ```
 
 3. Download or copy `config.obs` and `job_script_obs.bash` from this directory
-   into the same directory where you put the symlink
+   into a work directory
 
 4. Modify config.obs as needed (mainly to change the number of parallel tasks
    -- threads -- you can afford to run on a single node of your machine)
@@ -58,7 +58,7 @@ python -m ismip6_ocean_forcing config.obs
     # Input files
     temperatureFileName = ccsm4/thetao_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc
     salinityFileName = ccsm4/so_annual_CCSM4_rcp85_r1i1p1_185001-210012.nc
-    
+
     # Variable names
     lon = lon
     lat = lat
