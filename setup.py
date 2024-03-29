@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 install_requires = ['dask',
-                    'descartes',
+                    'descartes>=1.1.0',
                     'gsw',
                     'imageio',
                     'matplotlib',
@@ -11,11 +11,10 @@ install_requires = ['dask',
                     'numpy',
                     'requests',
                     'progressbar2',
-                    'pyremap<0.1.0',
                     'pyshp',
                     'scikit-fmm',
                     'scipy',
-                    'shapely',
+                    'shapely>=2.0',
                     'xarray']
 
 version = '1.0'
