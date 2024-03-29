@@ -67,7 +67,7 @@ def _combine_features(featuresToCombine, newName):
         featureShapes.append(shapely.geometry.shape(feature['geometry']))
         featureNames.append(feature['properties']['name'])
 
-    combinedShape = shapely.ops.cascaded_union(featureShapes)
+    combinedShape = shapely.ops.unary_union(featureShapes)
 
     feature = {}
     feature['properties'] = {}
