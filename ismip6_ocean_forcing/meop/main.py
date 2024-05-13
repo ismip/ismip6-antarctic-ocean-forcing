@@ -25,15 +25,15 @@ def process_meop(config):
     print('Processing Marine Mammals Exploring the Oceans Pole to Pole '
           '(MEOP)...')
 
-    dataSubdir = 'home/jupyter-froqu/MEOP_process/public/MEOP-CTD_2021-11-26'
+    dataSubdir = 'media/disk2/roquet/MEOP_public/MEOP-CTD_2024-03-08'
 
     if not os.path.exists(f'meop/{dataSubdir}'):
         baseURL = 'https://www.seanoe.org/data/00343/45461/data'
-        fileNames = ['89863.zip']
+        fileNames = ['109246.zip']
         download_files(fileNames, baseURL, 'meop')
 
         print('  Unzipping MEOP data...')
-        with zipfile.ZipFile('meop/89863.zip', 'r') as zip_ref:
+        with zipfile.ZipFile('meop/109246.zip', 'r') as zip_ref:
             zip_ref.extractall('meop/')
         print('     Done.')
 
