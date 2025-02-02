@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ismip6_ocean_forcing"
+dynamic = ["version"]
+description = "Script for creating ISMIP6 ocean forcing"
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dask",
+    "descartes>=1.1.0",
+    "gsw",
+    "imageio",
+    "matplotlib",
+    "netcdf4",
+    "numpy",
+    "requests",
+    "progressbar2",
+    "pyshp",
+    "scikit-fmm",
+    "scipy",
+    "shapely>=2.0",
+    "xarray"
+]
+
+[project.scripts]
+ismip6_ocean_forcing = "ismip6_ocean_forcing.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "ismip6_ocean_forcing.version.__version__" }
+
+[tool.setuptools.packages.find]
+exclude = ["conda", "example_usage", "licenses", "preprocess"]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/ismip/ismip6-antarctic-ocean-forcing/issues"

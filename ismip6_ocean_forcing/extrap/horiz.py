@@ -2,7 +2,7 @@ import xarray
 import numpy
 import os
 from scipy.signal import convolve2d
-from scipy.ndimage.morphology import binary_fill_holes
+from scipy.ndimage import binary_fill_holes
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 import progressbar

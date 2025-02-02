@@ -1,4 +1,4 @@
-{% set version = "1.1" %}
+{% set version = "1.2.0" %}
 
 package:
     name: ismip6_antarctic_ocean_forcing
