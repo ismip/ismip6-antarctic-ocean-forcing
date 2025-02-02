@@ -7,7 +7,7 @@ import argparse
 from importlib.resources import path
 from configparser import ConfigParser, ExtendedInterpolation
 
-import ismip6_ocean_forcing
+from ismip6_ocean_forcing.version import __version__
 from ismip6_ocean_forcing.rignot2013.remap import rignot_to_ismip6_grid
 from ismip6_ocean_forcing.bedmap2 import bedmap2_to_ismip6_grid
 from ismip6_ocean_forcing.imbie import make_imbie_masks
@@ -24,8 +24,7 @@ def main():
                         type=str, nargs='*', help='config file(s)')
     parser.add_argument('-v', '--version',
                         action='version',
-                        version='ismip6_ocean_forcing {}'.format(
-                                ismip6_ocean_forcing.__version__),
+                        version=f'ismip6_ocean_forcing {__version__}',
                         help="Show version number and exit")
     parser.add_argument('--model_field', dest='model_field', type=str,
                         help="A field (temperature or salinity) to "
@@ -41,7 +40,7 @@ def main():
 
     for config_file in args.config_files:
         if not os.path.exists(config_file):
-            raise OSError('Config file {} not found.'.format(config_file))
+            raise OSError(f'Config file {config_file} not found.')
 
     config_files = list()
     with path('ismip6_ocean_forcing', 'default.cfg') as default_config:
