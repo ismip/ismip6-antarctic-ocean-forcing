@@ -64,7 +64,10 @@ def _combine_climatologies(woaDecades, woaWeights, decades):
                 weightSum += weight*mask
                 outField[mask] += contribution.values[mask]
 
-        mask = numpy.isfinite(weightSum)
+        mask = numpy.logical_and(
+            numpy.isfinite(weightSum),
+            weightSum > 0
+        )
         outField[mask] /= weightSum[mask]
         outField[numpy.logical_not(mask)] = numpy.nan
         ds[fieldName] = (('depth', 'lat', 'lon'), outField)
