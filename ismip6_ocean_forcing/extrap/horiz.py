@@ -353,11 +353,11 @@ def mask_ice_and_bed(inFileName, maskedFileName, fieldName, openOceanMask,
         if 'time' in ds.dims:
             for tIndex in range(ds.sizes['time']):
                 field = field3D[tIndex, zIndex, :, :]
-                field[mask] = numpy.NaN
+                field[mask] = numpy.nan
                 field3D[tIndex, zIndex, :, :] = field
         else:
             field = field3D[zIndex, :, :]
-            field[mask] = numpy.NaN
+            field[mask] = numpy.nan
             field3D[zIndex, :, :] = field
 
     dims = ds[fieldName].dims
