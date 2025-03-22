@@ -207,6 +207,9 @@ def interp_depth(field, weights, inIndices, normalizationThreshold=None):
     result : xarray.DataArray
         ``field`` after interpolation
     '''
+    # Drop the 'time' dimension if it exists
+    if 'time' in field.dims:
+        field = field.drop('time')
 
     nzIn, ny, nx = field.values.shape
     nSlabs, nzOut = weights.values.shape
